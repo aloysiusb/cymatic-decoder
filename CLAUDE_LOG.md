@@ -6,8 +6,9 @@ the instruction at the top of CLAUDE.md. Add a new dated entry after
 making non-trivial changes, don't edit past entries except to fix a
 factual error.
 
-This project has no git history to reconstruct past entries from (it's
-not a git repo — see the note in CLAUDE.md), so this log starts here.
+This log started 2026-07-07 when the project had no git history yet (see
+the first entry below). Git was initialized later that same day — see
+the "git init + Render deploy" entries for when that changed.
 
 ## 2026-07-07 — CLAUDE.md + CLAUDE_LOG.md created
 Added as part of a portfolio-wide convention (see The-Lemmon-Dociere's
@@ -29,3 +30,12 @@ Confirmed no code hardcodes port 8420 (that's only in the local
 creating a GitHub repo under aloysiusb, and pushing next — actual Render
 web service creation (connecting the repo, setting build/start commands)
 has to happen in the Render dashboard, not something doable from here.
+
+## 2026-07-07 — deployed
+Pushed to https://github.com/aloysiusb/cymatic-decoder (public). Owner
+created the Render web service herself and it's live at
+https://cymatic-decoder.onrender.com/ — verified working: `/`,
+`/classical-pieces`, and `/modes?frequency=136` all return correct
+200 responses in production. Render free-tier services spin down after
+inactivity, so the first request after a while will be slow (cold
+start) — not a bug if that happens.
