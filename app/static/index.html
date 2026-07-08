@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cymatic Decoder</title>
+<style>
+  html { color-scheme: light; }
+  body { font-family: -apple-system, sans-serif; max-width: 820px; margin: 3rem auto; padding: 0 1.5rem; color: #111; background: #fff; }
+  h1 { font-size: 1.4rem; letter-spacing: 0.02em; }
+  h2 { font-size: 1rem; letter-spacing: 0.02em; margin-bottom: 0.6rem; }
+  .sub { color: #666; font-size: 0.85rem; margin-bottom: 2rem; }
+  #drop { border: 2px dashed #ccc; padding: 2.5rem; text-align: center; cursor: pointer; margin-bottom: 1.5rem; }
+  #drop.over { border-color: #b5451b; color: #b5451b; }
+  #preview { max-width: 100%; max-height: 260px; display: none; margin-bottom: 1.5rem; }
+  .card { border: 1px solid #e2e2e2; padding: 1.2rem 1.4rem; margin-bottom: 1.5rem; }
+  .card h3 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem 1.2rem; font-size: 0.85rem; }
+  .grid b { display: block; color: #666; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.8rem; align-items: center; }
+  button.play { padding: 0.5rem 1rem; cursor: pointer; }
+  select.piece { padding: 0.45rem; }
+  #status { font-size: 0.85rem; color: #b5451b; min-height: 1.2em; }
+  .viz3d { width: 100%; height: 420px; background: #0a0a0c; cursor: grab; border: 1px solid #e2e2e2; }
+  .viz2d-wrap canvas { width: 100%; height: auto; display: block; background: #0a0a0c; border: 1px solid #e2e2e2; }
+  .viz-wave canvas { width: 100%; height: auto; display: block; background: #0a0a0c; border: 1px solid #e2e2e2; }
+  .viz-block { margin-top: 1rem; }
+  .viz-label { font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; color: #888; margin-top: 0.4rem; }
+  .viz-caption { font-size: 0.72rem; color: #888; margin-top: 0.4rem; line-height: 1.5; }
+  .color-row { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.8rem; font-size: 0.78rem; color: #666; }
+  .color-row input[type=color] { width: 40px; height: 32px; padding: 0; border: 1px solid #ccc; cursor: pointer; }
+  .freq-input-row { display: flex; gap: 0.6rem; align-items: center; margin-bottom: 0.8rem; }
+  .freq-input-row input[type=number] { width: 120px; padding: 0.5rem; border: 1px solid #ccc; font-size: 0.95rem; }
+  .section-divider { border: none; border-top: 1px solid #e2e2e2; margin: 2.5rem 0; }
+  .sound-controls { display: flex; flex-wrap: wrap; gap: 1.2rem; margin-top: 0.9rem; }
+  .sound-controls label { display: flex; flex-direction: column; font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: #888; gap: 0.3rem; }
+  .sound-controls input[type=range] { width: 120px; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+  <h1>Cymatic Decoder</h1>
+  <div class="sub">Upload an image with radial/angular symmetry (mandala, rose window, temple site plan, Chladni photo) to reverse-engineer its driving frequency -- or type a frequency below to see and hear the pattern it would drive.</div>
+
+  <h2>Frequency &rarr; Pattern</h2>
+  <div class="card" id="exploreCard">
+    <div class="freq-input-row">
+      <input type="number" id="exploreFreq" value="136" min="0.1" max="20000" step="0.01"/>
+      <span style="font-size:0.85rem;color:#666">Hz</span>
+      <button id="exploreGo" class="play">Generate pattern</button>
+    </div>
+    <div id="exploreResult"></div>
+  </div>
+
+  <hr class="section-divider"/>
+
+  <h2>Image &rarr; Frequency</h2>
+  <div id="drop">Drop an image here, or click to choose one</div>
+  <input type="file" id="fileInput" accept="image/*" style="display:none"/>
+  <img id="preview"/>
+  <div id="status"></div>
+  <div id="results"></div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+let classicalPieces = [];
+fetch('/classical-pieces').then(r => r.json()).then(list => classicalPieces = list);
+
+function pieceOptions(){
+  return classicalPieces.map(p => `<option value="${p.key}">${p.label}</option>`).join('');
+}
+
+/* ── 3D spirograph: the actual nodal lines of the standing wave ──────
+   cos(m*theta)*sin(r*PI*radius) = 0 at m angular spokes (diameters) and
+   r concentric rings -- exactly where sand collects in a real Chladni
+   experiment. Rendered as thick 3D tubes on a dark ground, colored by
+   the decoded frequency's light-octave color (editable). */
+/* ── Flower of Life circle-packing lattice: a true triangular lattice
+   (not a hexagon-tiling grid -- those are different things), so each
+   circle's radius exactly equals the spacing to its six neighbors. That
+   equality is the defining trait of the Seed/Flower of Life construction. ── */
+function hexLatticeCenters(rings, spacing){
+  const centers = [];
+  for (let i = -rings; i <= rings; i++){
+    for (let j = -rings; j <= rings; j++){
+      if (Math.max(Math.abs(i), Math.abs(j), Math.abs(i + j)) > rings) continue;
+      const x = spacing * (i + j * 0.5);
+      const y = spacing * (j * Math.sqrt(3) / 2);
+      centers.push([x, y]);
+    }
+  }
+  return centers.sort((a, b) => Math.hypot(a[0], a[1]) - Math.hypot(b[0], b[1]));
+}
+
+function gcd(a, b){ return b === 0 ? a : gcd(b, a % b); }
+
+function circlePoints(cx, cz, radius, fraction, segments = 64){
+  const n = Math.max(2, Math.round(segments * fraction));
+  const pts = [];
+  for (let i = 0; i <= n; i++){
+    const a = -Math.PI / 2 + fraction * Math.PI * 2 * (i / n);
+    pts.push(cx + radius * Math.cos(a), 0, cz + radius * Math.sin(a));
+  }
+  return pts;
+}
+
+function buildModeViewer(container, m, r, colorHex){
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0a0c);
+  const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+  camera.position.set(0, 6.4, 7.4);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  container.innerHTML = '';
+  container.appendChild(renderer.domElement);
+
+  function applySize(){
+    const w = container.clientWidth || 420, h = container.clientHeight || 420;
+    renderer.setSize(w, h);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  applySize();
+  new ResizeObserver(applySize).observe(container);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+
+  const discRadius = 4.2;
+  let baseColor = new THREE.Color(colorHex);
+  const group = new THREE.Group();
+  scene.add(group);
+
+  /* ── Phase 1: Flower of Life, drawn one circle at a time like a compass ── */
+  const hexRings = Math.max(1, Math.min(3, r - 1));
+  const seedSpacing = discRadius / (2.1 + m * 0.16) / hexRings * 1.15;
+  const centers = hexLatticeCenters(hexRings, seedSpacing).filter(
+    ([x, y]) => Math.hypot(x, y) < discRadius + seedSpacing
+  );
+
+  let seedIdx = 0, seedSweep = 0;
+  // pace the whole Flower of Life build to a fixed ~14s regardless of how
+  // many circles the pattern needs -- busier patterns draw each circle
+  // faster rather than making the viewer wait minutes for complex ones.
+  const targetSeedSeconds = 14;
+  const seedSpeed = (centers.length * Math.PI * 2) / (targetSeedSeconds * 60);
+
+  function circleLine(cx, cz, radius, fraction){
+    const pts = circlePoints(cx, cz, radius, fraction);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+    return new THREE.Line(geo, new THREE.LineBasicMaterial({ color: baseColor }));
+  }
+
+  function updateSeed(){
+    group.clear();
+    for (let i = 0; i < seedIdx; i++){
+      group.add(circleLine(centers[i][0], centers[i][1], seedSpacing, 1));
+    }
+    if (seedIdx >= centers.length) return true;
+    seedSweep += seedSpeed;
+    const fraction = Math.min(1, seedSweep / (Math.PI * 2));
+    group.add(circleLine(centers[seedIdx][0], centers[seedIdx][1], seedSpacing, fraction));
+    if (fraction >= 1){ seedSweep = 0; seedIdx++; }
+    return false;
+  }
+
+  /* ── Phase 2: the ongoing focus -- a spirograph trace whose ratio comes
+     directly from the decoded angular-folds : radial-rings numbers, drawn
+     as a continuously growing, fading comet trail (like Venus tracing a
+     5-petal rose against Earth every 8 years). ── */
+  const g = gcd(Math.round(m), Math.round(r));
+  const p = Math.round(m) / g, q = Math.round(r) / g;
+  const R = discRadius * 0.85;
+  const rInner = R * Math.min(0.8, q / (p + q));
+  const d = rInner * 0.92;
+  const k = (R - rInner) / rInner;
+  const traceSpeed = 0.0045;
+  const maxTrailPoints = 3000;
+  let traceT = 0;
+  const trail = [];
+
+  const trailGeo = new THREE.BufferGeometry();
+  const trailPositions = new Float32Array(maxTrailPoints * 3);
+  const trailColors = new Float32Array(maxTrailPoints * 3);
+  trailGeo.setAttribute('position', new THREE.Float32BufferAttribute(trailPositions, 3));
+  trailGeo.setAttribute('color', new THREE.Float32BufferAttribute(trailColors, 3));
+  const trailLine = new THREE.Line(trailGeo, new THREE.LineBasicMaterial({ vertexColors: true }));
+
+  function updateTrace(){
+    traceT += traceSpeed;
+    const x = (R - rInner) * Math.cos(traceT) + d * Math.cos(k * traceT);
+    const z = (R - rInner) * Math.sin(traceT) - d * Math.sin(k * traceT);
+    trail.push(x, 0, z);
+    if (trail.length > maxTrailPoints * 3) trail.splice(0, 3);
+
+    const n = trail.length / 3;
+    for (let i = 0; i < n; i++){
+      trailPositions[i * 3] = trail[i * 3];
+      trailPositions[i * 3 + 1] = trail[i * 3 + 1];
+      trailPositions[i * 3 + 2] = trail[i * 3 + 2];
+      const age = i / n; // 0 = oldest, 1 = newest
+      const fade = 0.15 + 0.85 * age;
+      trailColors[i * 3] = baseColor.r * fade;
+      trailColors[i * 3 + 1] = baseColor.g * fade;
+      trailColors[i * 3 + 2] = baseColor.b * fade;
+    }
+    trailGeo.setDrawRange(0, n);
+    trailGeo.attributes.position.needsUpdate = true;
+    trailGeo.attributes.color.needsUpdate = true;
+  }
+
+  let seedDone = false, orbitPhase = 0, speed = 0.0012;
+  function animate(){
+    requestAnimationFrame(animate);
+    if (!seedDone){
+      seedDone = updateSeed();
+      if (seedDone){ group.clear(); group.add(trailLine); }
+    } else {
+      updateTrace();
+      orbitPhase += speed;
+      group.rotation.y = orbitPhase;
+    }
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  return {
+    setSpeed: s => { speed = s; },
+    setColor: hex => { baseColor = new THREE.Color(hex); },
+  };
+}
+
+/* ── 2D cymatic sand pattern -- the classic top-down Chladni figure ── */
+function draw2DCymatic(canvas, m, r, colorHex){
+  const size = canvas.width;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0a0a0c';
+  ctx.fillRect(0, 0, size, size);
+  const R = size * 0.46, cx0 = size / 2, cy0 = size / 2;
+  const N = 9000;
+  const PHI = (1 + Math.sqrt(5)) / 2;
+  for (let i = 0; i < N; i++){
+    const rad = Math.sqrt(i / N);
+    const th = i * 2 * Math.PI / (PHI * PHI);
+    const val = Math.cos(m * th) * Math.sin(r * Math.PI * rad);
+    const a = Math.abs(val);
+    if (a < 0.16){
+      const x = cx0 + R * rad * Math.cos(th);
+      const y = cy0 + R * rad * Math.sin(th);
+      ctx.fillStyle = colorHex;
+      ctx.globalAlpha = 0.9 - a * 3;
+      ctx.beginPath();
+      ctx.arc(x, y, 2.0, 0, 7);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(cx0, cy0, R, 0, 7);
+  ctx.stroke();
+}
+
+/* ── Linear waveform (oscilloscope) — the exact harmonic recipe that plays ── */
+function drawWaveform(canvas, freq, amplitudes, colorHex){
+  const W = canvas.width, H = canvas.height;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0a0a0c';
+  ctx.fillRect(0, 0, W, H);
+  const periods = 3;
+  const totalTime = periods / freq;
+  const N = 600;
+  const ys = [];
+  let maxAbs = 1e-9;
+  for (let i = 0; i < N; i++){
+    const t = (i / N) * totalTime;
+    let y = 0;
+    amplitudes.forEach((amp, idx) => { y += amp * Math.sin(2 * Math.PI * freq * (idx + 1) * t); });
+    ys.push(y);
+    maxAbs = Math.max(maxAbs, Math.abs(y));
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, H / 2); ctx.lineTo(W, H / 2); ctx.stroke();
+
+  ctx.strokeStyle = colorHex;
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  ys.forEach((y, i) => {
+    const x = (i / (N - 1)) * W;
+    const yy = H / 2 - (y / maxAbs) * (H * 0.42);
+    if (i === 0) ctx.moveTo(x, yy); else ctx.lineTo(x, yy);
+  });
+  ctx.stroke();
+}
+
+/* ── shared visualization block: 3D (own row) + 2D (own row, large) + waveform + color override ── */
+function buildVizBlock(root, m, r, freq, amplitudes, colorHex){
+  root.innerHTML = `
+    <div class="viz-block">
+      <div class="viz3d"></div>
+      <div class="viz-caption">3D nodal-line render (the real Chladni mode shape) -- drag to orbit, scroll to zoom.</div>
+    </div>
+    <div class="viz-block viz2d-wrap">
+      <canvas width="640" height="640"></canvas>
+      <div class="viz-label">2D sand pattern</div>
+    </div>
+    <div class="viz-block viz-wave">
+      <canvas width="640" height="180"></canvas>
+      <div class="viz-label">Waveform (harmonic recipe)</div>
+    </div>
+    <div class="color-row">
+      <input type="color" value="${colorHex}"/>
+      <span>Pattern color -- defaults to the decoded frequency's light-octave color, override freely</span>
+    </div>
+  `;
+  const viz3dEl = root.querySelector('.viz3d');
+  const viz2dCanvas = root.querySelector('.viz2d-wrap canvas');
+  const waveCanvas = root.querySelector('.viz-wave canvas');
+  const colorInput = root.querySelector('input[type=color]');
+
+  const viz = buildModeViewer(viz3dEl, m, r, colorHex);
+  draw2DCymatic(viz2dCanvas, m, r, colorHex);
+  drawWaveform(waveCanvas, freq, amplitudes, colorHex);
+
+  colorInput.addEventListener('input', e => {
+    viz.setColor(e.target.value);
+    draw2DCymatic(viz2dCanvas, m, r, e.target.value);
+    drawWaveform(waveCanvas, freq, amplitudes, e.target.value);
+  });
+
+  return { viz, setColor: hex => { colorInput.value = hex; colorInput.dispatchEvent(new Event('input')); } };
+}
+
+function playbackControlsHtml(freq, rings, voices, partials){
+  return `
+    <div class="btn-row">
+      <button class="play" data-action="organ">Play organ tone</button>
+      <button class="play" data-action="chorus">Play chorus (harmony)</button>
+      <select class="piece">${pieceOptions()}</select>
+      <button class="play" data-action="classical">Play classical piece</button>
+    </div>
+    <div class="sound-controls">
+      <label>Brightness <input type="range" class="s-brightness" min="0" max="100" value="50"/></label>
+      <label>Reverb <input type="range" class="s-reverb" min="0" max="100" value="50"/></label>
+      <label>Warmth <input type="range" class="s-warmth" min="0" max="100" value="50"/></label>
+      <label>Tempo <input type="range" class="s-tempo" min="50" max="150" value="100"/></label>
+    </div>
+  `;
+}
+
+function wirePlayback(container, freq, rings, voices, partials, onPlay){
+  const pct = sel => container.querySelector(sel).value / 100;
+  container.querySelectorAll('button.play').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.action;
+      const brightness = pct('.s-brightness');
+      const reverb = pct('.s-reverb');
+      const warmth = pct('.s-warmth');
+      const tempo = container.querySelector('.s-tempo').value / 100;
+      const audioEl = new Audio();
+      if (action === 'organ'){
+        audioEl.src = `/audio/${freq}.wav?mode=organ&partials=${partials}&rings=${rings}&brightness=${brightness}&reverb=${reverb}&warmth=${warmth}`;
+      } else if (action === 'chorus'){
+        audioEl.src = `/audio/${freq}.wav?mode=chorus&partials=${partials}&rings=${rings}&voices=${voices}&brightness=${brightness}&reverb=${reverb}&warmth=${warmth}`;
+      } else if (action === 'classical'){
+        const piece = container.querySelector('select.piece').value;
+        audioEl.src = `/audio/classical/${piece}.wav?tonic_hz=${freq}&partials=${partials}&rings=${rings}&brightness=${brightness}&reverb=${reverb}&warmth=${warmth}&tempo=${tempo}`;
+      }
+      audioEl.play();
+      if (onPlay) onPlay(audioEl);
+    });
+  });
+}
+
+/* ── Frequency -> Pattern (reverse direction) ── */
+async function exploreFrequency(freq){
+  const res = await fetch(`/modes?frequency=${freq}`);
+  if (!res.ok){ document.getElementById('exploreResult').textContent = 'Error fetching pattern'; return; }
+  const data = await res.json();
+  const p = data.profile;
+  const root = document.getElementById('exploreResult');
+  root.innerHTML = `
+    <div class="grid" style="margin-top:1rem">
+      <div><b>Detected mode</b>${data.angular_folds}-fold angular, ${data.radial_rings} radial rings</div>
+      <div><b>Musical note</b>${p.musical_note.name}${p.musical_note.octave}</div>
+      <div><b>Brainwave band</b>${p.brainwave_band.band}</div>
+      <div><b>Color octave</b>${p.color_octave.wavelength_nm} nm</div>
+    </div>
+    <div id="exploreViz"></div>
+    <div id="explorePlayback"></div>
+  `;
+  const vizRoot = document.getElementById('exploreViz');
+  buildVizBlock(vizRoot, data.angular_folds, data.radial_rings, data.frequency_hz, data.sound.harmonic_amplitudes, p.color_octave.hex);
+
+  const playRoot = document.getElementById('explorePlayback');
+  playRoot.innerHTML = playbackControlsHtml(data.frequency_hz, data.radial_rings, data.sound.voices, data.sound.num_partials);
+  wirePlayback(playRoot, data.frequency_hz, data.radial_rings, data.sound.voices, data.sound.num_partials);
+}
+document.getElementById('exploreGo').addEventListener('click', () => {
+  exploreFrequency(parseFloat(document.getElementById('exploreFreq').value));
+});
+exploreFrequency(136);
+
+/* ── Image -> Frequency ── */
+const drop = document.getElementById('drop');
+const fileInput = document.getElementById('fileInput');
+const preview = document.getElementById('preview');
+const statusEl = document.getElementById('status');
+const results = document.getElementById('results');
+
+drop.addEventListener('click', () => fileInput.click());
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => {
+  e.preventDefault(); drop.classList.remove('over');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+async function handleFile(file){
+  preview.src = URL.createObjectURL(file);
+  preview.style.display = 'block';
+  results.innerHTML = '';
+  statusEl.textContent = 'Analyzing symmetry...';
+
+  const form = new FormData();
+  form.append('image', file);
+  try {
+    const res = await fetch('/analyze', { method: 'POST', body: form });
+    if (!res.ok) {
+      const err = await res.json();
+      statusEl.textContent = 'Error: ' + err.detail;
+      return;
+    }
+    const data = await res.json();
+    statusEl.textContent = '';
+    renderAnalysis(data);
+  } catch (err) {
+    statusEl.textContent = 'Error: ' + err.message;
+  }
+}
+
+function renderAnalysis(data){
+  const s = data.detected_symmetry;
+  const first = data.candidate_frequencies[0];
+
+  const symCard = document.createElement('div');
+  symCard.className = 'card';
+  symCard.innerHTML = `
+    <h3>Detected symmetry</h3>
+    <div class="grid">
+      <div><b>Angular folds</b>${s.angular_folds}-fold (confidence ${s.angular_confidence})</div>
+      <div><b>Radial rings</b>${s.radial_rings} (confidence ${s.radial_confidence})</div>
+    </div>
+    <div id="analysisViz"></div>
+  `;
+  results.appendChild(symCard);
+  buildVizBlock(
+    symCard.querySelector('#analysisViz'), s.angular_folds, s.radial_rings,
+    first.audible_tone.frequency_hz, first.audible_tone.harmonic_amplitudes, first.profile.color_octave.hex
+  );
+
+  data.candidate_frequencies.forEach(c => {
+    const p = c.profile;
+    const giza = c.giza_kings_chamber;
+    const gizaText = giza.within_kings_chamber_range
+      ? 'within the Giza King’s Chamber measured range (~16–30 Hz)'
+      : `${giza.deviation_pct > 0 ? '+' : ''}${giza.deviation_pct}% from the nearest Giza King’s Chamber edge (~16–30 Hz)`;
+
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = `
+      <h3>${c.frequency_hz} Hz</h3>
+      <div class="grid">
+        <div><b>Giza comparison</b>${gizaText}</div>
+        <div><b>Musical note</b>${p.musical_note.name}${p.musical_note.octave} (${p.musical_note.cents >= 0 ? '+' : ''}${p.musical_note.cents}¢)</div>
+        <div><b>Brainwave band</b>${p.brainwave_band.band} — ${p.brainwave_band.desc}</div>
+        <div><b>Schumann proximity</b>${p.schumann.deviation_pct >= 0 ? '+' : ''}${p.schumann.deviation_pct}% from mode ${p.schumann.harmonic} (${p.schumann.mode_hz} Hz)</div>
+        <div><b>Color octave</b>${p.color_octave.visible ? p.color_octave.wavelength_nm + ' nm' : 'near-UV edge'} (+${p.color_octave.octaves_up} octaves)</div>
+        <div><b>Physical scale</b>${p.physical_scale.wavelength_m} m wavelength in air</div>
+      </div>
+      <div class="playback"></div>
+    `;
+    const playRoot = div.querySelector('.playback');
+    playRoot.innerHTML = playbackControlsHtml(c.audible_tone.frequency_hz, s.radial_rings, c.audible_tone.voices, c.audible_tone.num_partials);
+    wirePlayback(playRoot, c.audible_tone.frequency_hz, s.radial_rings, c.audible_tone.voices, c.audible_tone.num_partials);
+    results.appendChild(div);
+  });
+}
+</script>
+</body>
+</html>
