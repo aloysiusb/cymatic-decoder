@@ -39,3 +39,23 @@ https://cymatic-decoder.onrender.com/ — verified working: `/`,
 200 responses in production. Render free-tier services spin down after
 inactivity, so the first request after a while will be slow (cold
 start) — not a bug if that happens.
+
+## 2026-07-11 — Bumped off the free plan
+Owner confirmed she's on Render's Pro tier, so the cold-start/spin-down
+behavior noted above no longer needs to be tolerated. Added
+`plan: starter` to `render.yaml` — no other change needed (no persistent
+disk here, this app has no database). Same caveat as the equivalent
+evergreen-driver-app change: this only takes effect automatically if the
+Render service was created via Blueprint sync; since the owner created
+this service manually in the dashboard (per the "deployed" entry above),
+she likely needs to change the plan directly in the Render dashboard
+(Settings → Instance Type) rather than relying on this file alone —
+flagged to her, not something to assume worked without checking.
+
+**Left `render.yaml` as the only file touched this session.** The
+working tree had other uncommitted, unlogged changes when this session
+started (`app/audio.py`, `app/main.py`, `app/static/index.html` modified,
+new `app/settings_store.py`) — matches the exact parallel-session
+collision pattern from this repo's history (see git log / prior
+sessions). Did not stage, commit, inspect closely, or otherwise touch
+any of them.
