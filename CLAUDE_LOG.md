@@ -138,3 +138,15 @@ tap-to-ripple) was offered as a bigger follow-up, not started.
 - `uEnergy` scales wave height (so weak drive naturally shows fewer crest
   lines) and brightness: idle 0.62, playing 0.8–1.25 by the Volume
   slider, eased so the surface swells up / settles down.
+
+## 2026-09-24 — Phone header fix (gear icon)
+Owner picked the gear-icon option. CSS + markup only, header of
+`resonance-engine.html`:
+- ≤640px: Settings button shows an inline SVG gear (label hidden, kept as
+  aria-label/title); tighter header gap, logo and nav padding.
+- ≤460px: "Decode a pattern" → "Decode" (" a pattern" in a `.long` span).
+- ≤360px: slightly smaller logo/nav spacing for the smallest phones.
+- Nav links `nowrap`; the "Prototype 01" tag now hides below 860px (was
+  640px) so the nav doesn't wrap at tablet widths.
+Verified no horizontal scroll at 320/360/375/390/430/500/641/700/861/1200px;
+Settings drawer and Decode view still open from the header.
