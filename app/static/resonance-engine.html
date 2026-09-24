@@ -742,7 +742,7 @@ const WATER_VS = `attribute vec2 p; varying vec2 uv; void main(){ uv = p; gl_Pos
 const WATER_FS = `
 precision highp float;
 varying vec2 uv;
-uniform float uT, uMix, uEps;
+uniform float uT, uMix, uEps, uEnergy;   // uEnergy: 0 calm … 1 full drive
 uniform vec3 uCol, uWarm, uCool, uAcc;   // tone hue, analogous ±30°, complementary accent
 uniform vec2 uA, uB;          // (folds m, rings r): current, previous
 const float PI = 3.14159265;
@@ -770,7 +770,8 @@ float field(vec2 q, vec2 M, float t){
 
 float height(vec2 q){
   float a = field(q, uA, uT);
-  return uMix >= 1. ? a : mix(field(q, uB, uT), a, uMix);
+  float h = uMix >= 1. ? a : mix(field(q, uB, uT), a, uMix);
+  return h * uEnergy;               // weak drive → low waves → fewer crest lines
 }
 
 void main(){
@@ -812,6 +813,7 @@ void main(){
   col += mix(uAcc, vec3(1.), 0.25) * hot * 0.55 * inside;
   col += uAcc * exp(-pow(r / 0.035, 2.)) * 0.6;   // accent spark at the still centre
   col += mix(uCol, uCool, 0.6) * rim;
+  col *= 0.55 + 0.45 * uEnergy;
   col = 1. - exp(-col * 1.35);                 // soft tone-map = glow without clipping
   gl_FragColor = vec4(col, 1.);
 }`;
@@ -821,6 +823,24 @@ const cymWrap = document.getElementById('cymWrap');
 let water = null;
 let cymView = 'water';
 let waterPrev = null, waterCur = null, waterMixStart = 0;
+let waterTime = 0.6, waterEnergy = 0.3, waterOnScreen = true;
+
+/* Motion: low tones heave slowly, high tones shimmer quickly; volume sets
+   how hard the surface is driven; with no tone it keeps a faint idle ripple. */
+function waterRate(f){
+  const x = Math.min(1, Math.max(0, Math.log2(Math.max(f, 1) / 8) / 8));   // 8 Hz → 0 … 2 kHz → 1
+  return 0.008 + 0.042 * x;
+}
+function waterTargetEnergy(){
+  const playing = voices.raw || voices.lift || voices.glass;
+  if (!playing) return 0.62;
+  return 0.8 + 0.45 * (+document.getElementById('volSlider').value / 100);
+}
+function stepWater(){
+  const playing = voices.raw || voices.lift || voices.glass;
+  waterTime += waterRate(freq) * (playing ? 1 : 0.18);
+  waterEnergy += (waterTargetEnergy() - waterEnergy) * 0.04;   // swell up / settle down
+}
 
 function initWater(){
   const gl = wcv.getContext('webgl', { antialias: true, preserveDrawingBuffer: true });
@@ -845,7 +865,7 @@ function initWater(){
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
     const u = {};
-    ['uT','uMix','uEps','uCol','uWarm','uCool','uAcc','uA','uB'].forEach(n => u[n] = gl.getUniformLocation(prog, n));
+    ['uT','uMix','uEps','uEnergy','uCol','uWarm','uCool','uAcc','uA','uB'].forEach(n => u[n] = gl.getUniformLocation(prog, n));
     return { gl, u };
   } catch(e){
     console.warn('Water view unavailable:', e);
@@ -887,9 +907,9 @@ function drawWater(){
   const { gl, u } = water;
   const mixT = waterMix();
   const ease = mixT * mixT * (3 - 2 * mixT);
-  const playing = voices.raw || voices.lift || voices.glass;
   gl.viewport(0, 0, wcv.width, wcv.height);
-  gl.uniform1f(u.uT, playing ? animT : 0.6);
+  gl.uniform1f(u.uT, waterTime);
+  gl.uniform1f(u.uEnergy, waterEnergy);
   gl.uniform1f(u.uMix, ease);
   gl.uniform1f(u.uEps, 1.6 / wcv.width);
   const pal = tonePalette(freq);
@@ -958,11 +978,11 @@ function drawCymatic(){
 }
 
 function loop(){
-  if (voices.raw || voices.lift || voices.glass){
+  if (cymView === 'water' && water){
+    if (waterOnScreen){ stepWater(); drawWater(); }   // always alive; paused when scrolled away
+  } else if (voices.raw || voices.lift || voices.glass){
     animT += 0.03;
     drawCymatic();
-  } else if (cymView === 'water' && water && waterMix() < 1){
-    drawWater();                     // let a new pattern re-form after a change
   }
   requestAnimationFrame(loop);
 }
@@ -1198,6 +1218,8 @@ dropZone.addEventListener('drop', e => decodeImage(e.dataTransfer.files[0]));
 /* ═══════════ Boot ═══════════ */
 water = initWater();
 if (!water) cymWrap.classList.add('no-gl');
+if (water && 'IntersectionObserver' in window)
+  new IntersectionObserver(es => { waterOnScreen = es[0].isIntersecting; }).observe(wcv);
 document.querySelectorAll('#cymViews button').forEach(b =>
   b.addEventListener('click', () => setCymView(b.dataset.view)));
 let savedView = 'water';

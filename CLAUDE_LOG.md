@@ -125,3 +125,16 @@ warm (centre) → tone → cool (rim); crest / mid / nodal line layers each
 take a different neighbour so they interlace; the caustic fill leans cool
 so it sits back; the accent appears only in the hottest cores and as a
 small spark at the still centre.
+
+## 2026-09-24 — Water view: motion (idle ripple, speed by frequency, volume energy)
+Owner asked for the water to move like water. Honest framing given to
+her: it's standing-wave math + caustic lighting, not a fluid simulation;
+a real GPU wave-equation sim (ripples propagate, reflect off the rim,
+tap-to-ripple) was offered as a bigger follow-up, not started.
+- `waterTime` now always advances in Water view (rAF), paused via
+  IntersectionObserver when the canvas is scrolled off-screen.
+- `waterRate(freq)`: log-mapped, 8 Hz slow heave → 2 kHz fast shimmer;
+  idle runs at 18% of that rate.
+- `uEnergy` scales wave height (so weak drive naturally shows fewer crest
+  lines) and brightness: idle 0.62, playing 0.8–1.25 by the Volume
+  slider, eased so the surface swells up / settles down.
