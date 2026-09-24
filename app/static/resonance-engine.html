@@ -136,6 +136,19 @@ select, .opt-group input[type=range] { font-family: var(--font); font-size: 0.72
 .cym-wrap { background: var(--white); border: 1px solid var(--rule); padding: 1.2rem; display: flex; flex-direction: column; align-items: center; }
 #cymCanvas { width: 100%; max-width: 480px; aspect-ratio: 1; display: block; }
 .cym-caption { font-size: 0.64rem; color: var(--muted); margin-top: 0.9rem; text-align: center; line-height: 1.6; max-width: 480px; }
+.cym-views { display: flex; gap: 0.4rem; margin-bottom: 1rem; }
+.cym-views button {
+  border: 1px solid var(--rule); background: var(--white);
+  font-family: var(--font); font-weight: 600; font-size: 0.62rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  padding: 0.5rem 0.9rem; cursor: pointer; transition: all .15s ease;
+}
+.cym-views button:hover { border-color: var(--accent); color: var(--accent); }
+.cym-views button.active { background: var(--black); border-color: var(--black); color: var(--white); }
+#waterCanvas { width: 100%; max-width: 480px; aspect-ratio: 1; display: block; background: #000; }
+.cym-wrap[data-view=water] #cymCanvas,
+.cym-wrap[data-view=sand] #waterCanvas { display: none; }
+.cym-wrap.no-gl .cym-views { display: none; }
 
 /* ── Profile cards ──────────────────────────────────────── */
 .profile { padding: 1.8rem 0; }
@@ -336,7 +349,12 @@ footer {
   <!-- Cymatic visualization -->
   <section class="cymatic">
     <div class="section-label">Cymatic mode <b>·</b> illustrative</div>
-    <div class="cym-wrap">
+    <div class="cym-wrap" id="cymWrap" data-view="water">
+      <div class="cym-views" id="cymViews">
+        <button data-view="water" class="active">Water</button>
+        <button data-view="sand">Sand</button>
+      </div>
+      <canvas id="waterCanvas" width="720" height="720"></canvas>
       <canvas id="cymCanvas" width="600" height="600"></canvas>
       <div class="cym-caption" id="cymCaption"></div>
     </div>
@@ -715,7 +733,164 @@ function cymModes(f){
   return { m, r };
 }
 
+/* ═══════════ Water view (WebGL) ═══════════
+   A lit water surface: height = sum of circular standing waves (Bessel-style
+   radial × cos(mθ) angular, plus m plane waves for the lace). Brightness is
+   where the curved surface focuses light (caustics), like a CymaScope photo.
+   Tint = the tone's own color octave (same pitch class → same hue). */
+const WATER_VS = `attribute vec2 p; varying vec2 uv; void main(){ uv = p; gl_Position = vec4(p, 0., 1.); }`;
+const WATER_FS = `
+precision highp float;
+varying vec2 uv;
+uniform float uT, uMix, uEps;
+uniform vec3 uCol;
+uniform vec2 uA, uB;          // (folds m, rings r): current, previous
+const float PI = 3.14159265;
+
+float Jap(float n, float x){  // Bessel J_n, asymptotic form with a calm core
+  x = max(x, 0.35);
+  float env = smoothstep(0.55 * n, 0.55 * n + 2.2, x);
+  return env * pow(x, -0.2) * cos(x - n * PI * 0.5 - PI * 0.25);   // slow decay keeps lace out to the rim
+}
+
+float field(vec2 q, vec2 M, float t){
+  float r = length(q), th = atan(q.y, q.x);
+  float m = M.x, k = 10. + M.y * 5.;
+  float h = Jap(m, k * r) * cos(m * th) * cos(t);
+  h += 0.55 * Jap(2. * m, 1.6 * k * r) * cos(2. * m * th + 0.7) * cos(1.31 * t + 1.);
+  h += 0.45 * Jap(0., 0.62 * k * r) * cos(0.77 * t + 2.);
+  float w = 0.;
+  for (int j = 0; j < 11; j++){
+    if (float(j) >= m) break;
+    float a = 2. * PI * float(j) / m;
+    w += cos(1.25 * k * dot(q, vec2(cos(a), sin(a))) + 0.5 * t);
+  }
+  return h + 0.10 * w / m * smoothstep(0.15, 0.6, r);
+}
+
+float height(vec2 q){
+  float a = field(q, uA, uT);
+  return uMix >= 1. ? a : mix(field(q, uB, uT), a, uMix);
+}
+
+void main(){
+  vec2 q = uv / 0.92;                          // plate radius
+  float r = length(q);
+  float e = uEps;
+  float h  = height(q);
+  float hx = height(q + vec2(e, 0.)), hX = height(q - vec2(e, 0.));
+  float hy = height(q + vec2(0., e)), hY = height(q - vec2(0., e));
+  float lap = (hx + hX + hy + hY - 4. * h) / (e * e);
+  vec2 g = vec2(hx - hX, hy - hY) / (2. * e);
+  float k = 10. + uA.y * 5.;
+
+  // caustic focus: convex crests gather light into bright filaments
+  float c = -lap / (k * k);
+  float caustic = pow(max(c, 0.) * 2.2, 2.2) * 1.6;
+  // thin filaments: iso-lines of the surface, ~1.5px wide at any slope
+  float px = 1.5 * uEps, gl = max(length(g), 1e-3);
+  float crest = exp(-pow((h - 0.42) / (gl * px), 2.));
+  float mid   = exp(-pow((h - 0.12) / (gl * px * 1.3), 2.)) * 0.45;
+  float node  = exp(-pow(h / (gl * px * 1.6), 2.)) * 0.18;
+  float light = (crest + mid + node) * 1.3 + caustic * 0.35 + 0.02;
+
+  float inside = 1. - smoothstep(0.995, 1.0, r);
+  float rim = exp(-pow((r - 1.) / 0.008, 2.)) * 0.7 + exp(-pow((r - 1.) / 0.05, 2.)) * 0.08;
+  float dome = 0.75 + 0.25 * (1. - r * r);     // lens-like falloff toward the edge
+
+  vec3 col = uCol * light * dome * inside;
+  col += mix(uCol, vec3(1.), 0.6) * smoothstep(0.9, 2.2, light) * 0.5 * inside;  // hot white cores
+  col += uCol * rim;
+  col = 1. - exp(-col * 1.35);                 // soft tone-map = glow without clipping
+  gl_FragColor = vec4(col, 1.);
+}`;
+
+const wcv = document.getElementById('waterCanvas');
+const cymWrap = document.getElementById('cymWrap');
+let water = null;
+let cymView = 'water';
+let waterPrev = null, waterCur = null, waterMixStart = 0;
+
+function initWater(){
+  const gl = wcv.getContext('webgl', { antialias: true, preserveDrawingBuffer: true });
+  if (!gl) return null;
+  const sh = (type, src) => {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  };
+  try {
+    const prog = gl.createProgram();
+    gl.attachShader(prog, sh(gl.VERTEX_SHADER, WATER_VS));
+    gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, WATER_FS));
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+    gl.useProgram(prog);
+    const buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+    const loc = gl.getAttribLocation(prog, 'p');
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    const u = {};
+    ['uT','uMix','uEps','uCol','uA','uB'].forEach(n => u[n] = gl.getUniformLocation(prog, n));
+    return { gl, u };
+  } catch(e){
+    console.warn('Water view unavailable:', e);
+    return null;
+  }
+}
+
+function toneRGB(f){
+  const hex = colorOctave(f).hex;
+  const c = [1,3,5].map(i => parseInt(hex.slice(i, i+2), 16) / 255);
+  const mx = Math.max(...c, 0.01);
+  return c.map(v => v / mx);                   // full-strength hue
+}
+
+function waterMix(){
+  return Math.min(1, (performance.now() - waterMixStart) / 900);
+}
+
+function drawWater(){
+  const { m, r } = cymModes(freq);
+  if (!waterCur || waterCur[0] !== m || waterCur[1] !== r){
+    waterPrev = waterCur || [m, r];
+    waterCur = [m, r];
+    waterMixStart = performance.now();
+  }
+  const { gl, u } = water;
+  const mixT = waterMix();
+  const ease = mixT * mixT * (3 - 2 * mixT);
+  const playing = voices.raw || voices.lift || voices.glass;
+  gl.viewport(0, 0, wcv.width, wcv.height);
+  gl.uniform1f(u.uT, playing ? animT : 0.6);
+  gl.uniform1f(u.uMix, ease);
+  gl.uniform1f(u.uEps, 1.6 / wcv.width);
+  gl.uniform3fv(u.uCol, toneRGB(freq));
+  gl.uniform2f(u.uA, waterCur[0], waterCur[1]);
+  gl.uniform2f(u.uB, waterPrev[0], waterPrev[1]);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+  const co = colorOctave(freq);
+  document.getElementById('cymCaption').textContent =
+    `Water surface mode: ${m}-fold symmetry, ${r} rings. Color: this tone raised ${co.octaves} octaves lands at ` +
+    `${co.visible ? co.nm.toFixed(0) + ' nm' : 'the near-UV edge'} — every octave of the same note shares this hue. ` +
+    `Illustrative — light focused by the moving surface, as in a CymaScope.`;
+}
+
+function setCymView(v){
+  cymView = (v === 'water' && water) ? 'water' : 'sand';
+  cymWrap.dataset.view = cymView;
+  document.querySelectorAll('#cymViews button').forEach(b =>
+    b.classList.toggle('active', b.dataset.view === cymView));
+  try { localStorage.setItem('resonance_cym_view', cymView); } catch(e){}
+  drawCymatic();
+}
+
 function drawCymatic(){
+  if (cymView === 'water' && water) { drawWater(); return; }
   const { m, r } = cymModes(freq);
   const W = cv.width, H = cv.height, R = W * 0.46;
   cx.clearRect(0, 0, W, H);
@@ -758,6 +933,8 @@ function loop(){
   if (voices.raw || voices.lift || voices.glass){
     animT += 0.03;
     drawCymatic();
+  } else if (cymView === 'water' && water && waterMix() < 1){
+    drawWater();                     // let a new pattern re-form after a change
   }
   requestAnimationFrame(loop);
 }
@@ -991,6 +1168,16 @@ fileIn.addEventListener('change', e => decodeImage(e.target.files[0]));
 dropZone.addEventListener('drop', e => decodeImage(e.dataTransfer.files[0]));
 
 /* ═══════════ Boot ═══════════ */
+water = initWater();
+if (!water) cymWrap.classList.add('no-gl');
+document.querySelectorAll('#cymViews button').forEach(b =>
+  b.addEventListener('click', () => setCymView(b.dataset.view)));
+let savedView = 'water';
+try { savedView = localStorage.getItem('resonance_cym_view') || 'water'; } catch(e){}
+cymView = (savedView === 'water' && water) ? 'water' : 'sand';
+cymWrap.dataset.view = cymView;
+document.querySelectorAll('#cymViews button').forEach(b =>
+  b.classList.toggle('active', b.dataset.view === cymView));
 loadSettings();
 render();
 loop();

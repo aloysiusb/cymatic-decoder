@@ -95,3 +95,23 @@ mount — no Python change. Changes vs. the handoff prototype:
   switch) that posts an image to the existing `POST /analyze` and loads a
   chosen candidate frequency into the engine. Backend `forward_modes()`
   and engine `cymModes()` share the same formula. Tested locally.
+
+## 2026-09-24 — Water cymatics view on the Resonance Engine
+Owner reopened the visual design: sent CymaScope water-cymatics reference
+photos and chose "water", with color matching each tone's frequency.
+Added to `app/static/resonance-engine.html` only (no Python change):
+- **Water / Sand switch** above the pattern; Water is default, choice is
+  remembered per browser. Sand = the original φ-spiral dots, unchanged.
+  Falls back to Sand automatically if WebGL isn't available.
+- **Water view**: one full-screen WebGL fragment shader, no libraries.
+  Surface height = Bessel-style radial × cos(mθ) modes + m plane waves,
+  driven by the same `cymModes()` folds/rings the engine and `/analyze`
+  use. Light = thin glowing iso-lines around wave crests + a caustic fill,
+  soft tone-map glow, bright rim — to read like light on moving water.
+- **Color** = `colorOctave(freq)` (the tone raised by octaves into visible
+  light), normalized to full strength — so every octave of a note shares
+  a hue, matching the "Color octave" profile card.
+- Animates while a tone plays; on a frequency change the old pattern
+  cross-fades into the new one over ~0.9s.
+Pre-existing, not touched: at 390px phone width the header (logo + nav
++ Settings) overflows horizontally by ~85px. Flagged to owner.

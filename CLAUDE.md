@@ -47,6 +47,14 @@ the working directory.
 - Python 3.9 here doesn't support `X | None` type-hint syntax — needs
   `from __future__ import annotations` at the top of any file using it.
 
+## Update 2026-09-24 — owner reopened visuals: water cymatics
+Owner shared CymaScope water-cymatics photos (cadboy_hk, magicaqua.de
+"planet tones") and chose a **water** look, with each tone tinted by its
+own color octave. Built as a WebGL "Water" view on
+`app/static/resonance-engine.html` (Sand/dots view kept as a toggle).
+Iterate on *that* direction from her feedback; the notes below about
+not proposing new aesthetics still apply to anything beyond it.
+
 ## Current state (as of 2026-07-06)
 **3D visualization design was explicitly handed off to the owner — do NOT
 initiate further 3D visual design work on this project unless she asks
