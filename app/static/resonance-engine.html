@@ -341,7 +341,7 @@ footer {
         <div class="tone-freq" id="glassFreq"></div>
         <div class="tone-note" id="glassNote"></div>
         <button class="play-btn" id="playGlass">Play harp</button>
-        <div class="engine-note">Plucked strings rolling slowly through the tone’s root, fifth and octave — soft attack, long ring, stone-hall reverb.</div>
+        <div class="engine-note">Soft plucked strings drifting through the tone’s root, fifth and octave over a quiet breathing pad — long ring, dreamy halo.</div>
       </div>
     </div>
     <div class="engine-opts">
@@ -709,23 +709,24 @@ function applyTimbre(osc, name){
    a soft noise burst circulates in a tuned delay line and loses its highs a
    little each pass, so it rings warm and fades like a gut string. */
 const harpCache = new Map();
+let harpHalo = null;
 
 function harpPluck(f){
   const key = Math.round(f * 10);
   if (harpCache.has(key)) return harpCache.get(key);
-  const sr = actx.sampleRate, len = Math.floor(sr * 4.5);
+  const sr = actx.sampleRate, len = Math.floor(sr * 6.5);
   const buf = actx.createBuffer(1, len, sr);
   const y = buf.getChannelData(0);
   const D = sr / f - 0.5;                       // loop filter adds half a sample
   const Di = Math.floor(D), fr = D - Di;
-  const t60 = Math.min(5, Math.max(1.8, 4.2 * Math.sqrt(220 / f)));   // low strings ring longer
+  const t60 = Math.min(6.5, Math.max(2.5, 5.5 * Math.sqrt(220 / f)));  // long, low strings ring longest
   const g = Math.pow(10, -3 / (t60 * f));       // loss per trip round the string
-  // excitation: noise, twice low-passed = a finger, not a pick
+  // excitation: noise, heavily low-passed = the soft pad of a finger
   let a = 0, b = 0;
   const ex = new Float32Array(Di + 2);
   for (let i = 0; i < ex.length; i++){
-    a += 0.35 * ((Math.random() * 2 - 1) - a);
-    b += 0.35 * (a - b);
+    a += 0.18 * ((Math.random() * 2 - 1) - a);
+    b += 0.18 * (a - b);
     ex[i] = b;
   }
   const at = n => n < 0 ? 0 : y[n];
@@ -736,7 +737,7 @@ function harpPluck(f){
     y[n] = (n < ex.length ? ex[n] : 0) + g * 0.5 * (d1 + d2);
     const v = Math.abs(y[n]); if (v > peak) peak = v;
   }
-  const norm = 0.9 / (peak || 1), fadeIn = Math.floor(sr * 0.003), fadeOut = Math.floor(sr * 0.4);
+  const norm = 0.9 / (peak || 1), fadeIn = Math.floor(sr * 0.012), fadeOut = Math.floor(sr * 0.4);
   for (let n = 0; n < len; n++){
     let w = norm;
     if (n < fadeIn) w *= n / fadeIn;
@@ -747,9 +748,9 @@ function harpPluck(f){
   return buf;
 }
 
-// a slow rise-and-fall through consonant intervals of the root (just ratios)
-const HARP_PATTERN = [1, 1.5, 2, 2.5, 3, 2.5, 2, 1.5];
-const HARP_STEP = 0.46;                         // seconds between plucks
+// a slow, dreamy rise-and-fall through consonant intervals of the root (just ratios)
+const HARP_PATTERN = [1, 1.5, 2, 2.5, 2, 1.5];
+const HARP_STEP = 0.9;                          // seconds between plucks
 
 function harpRoot(){
   let r = octaveLift(freq).freq;                // 220–880 Hz
@@ -760,12 +761,37 @@ function harpRoot(){
 function startHarp(){
   const bus = actx.createGain();
   const warm = actx.createBiquadFilter();
-  warm.type = 'lowpass'; warm.frequency.value = 3400; warm.Q.value = 0.5;
-  bus.gain.value = (document.getElementById('volSlider').value / 100) * 0.5;
+  warm.type = 'lowpass'; warm.frequency.value = 2200; warm.Q.value = 0.4;
+  bus.gain.value = 0;
+  bus.gain.setTargetAtTime((document.getElementById('volSlider').value / 100) * 0.5, actx.currentTime, 0.4);
   bus.connect(warm);
-  warm.connect(dryGain);
+  const dry = actx.createGain(); dry.gain.value = 0.7;
+  warm.connect(dry).connect(dryGain);
   warm.connect(convolver);
-  const h = { harp: true, gain: bus, step: 0, next: actx.currentTime + 0.05, timer: 0 };
+  // halo: a long, soft reverb of the harp's own, on top of the room
+  if (!harpHalo){
+    harpHalo = actx.createConvolver();
+    harpHalo.buffer = makeImpulse(6.0, 2.2);
+    const hg = actx.createGain(); hg.gain.value = 0.32;
+    harpHalo.connect(hg).connect(actx.destination);
+  }
+  warm.connect(harpHalo);
+
+  // pad: two quiet, slightly detuned sines (root + fifth) breathing slowly underneath
+  const pad = actx.createGain(); pad.gain.value = 0.05;
+  const lfo = actx.createOscillator(), lfoAmt = actx.createGain();
+  lfo.frequency.value = 0.08; lfoAmt.gain.value = 0.03;       // ~12 s swell
+  lfo.connect(lfoAmt).connect(pad.gain);
+  const padOsc = [[1, -4], [1.5, 4]].map(([ratio, cents]) => {
+    const o = actx.createOscillator();
+    o.type = 'sine'; o.detune.value = cents;
+    o.frequency.value = harpRoot() * ratio; o.ratio = ratio;
+    o.connect(pad); o.start();
+    return o;
+  });
+  pad.connect(bus); lfo.start();
+
+  const h = { harp: true, gain: bus, step: 0, next: actx.currentTime + 0.3, timer: 0, padOsc, lfo };
   const pluck = (f, t, vel, pan) => {
     const src = actx.createBufferSource();
     src.buffer = harpPluck(f);
@@ -779,11 +805,11 @@ function startHarp(){
     while (h.next < actx.currentTime + 0.2){
       const i = h.step % HARP_PATTERN.length, root = harpRoot();
       const ratio = HARP_PATTERN[i];
-      if (i === 0) pluck(root / 2, h.next, 0.55, 0);            // soft bass under each cycle
-      pluck(root * ratio, h.next + (Math.random() - 0.5) * 0.02,  // a touch of human timing
-            0.5 + 0.25 * Math.random(), (ratio - 2) * 0.35);
+      if (i === 0) pluck(root / 2, h.next, 0.4, 0);             // soft bass under each cycle
+      pluck(root * ratio, h.next + (Math.random() - 0.5) * 0.06,  // unhurried, human timing
+            0.34 + 0.16 * Math.random(), (ratio - 1.75) * 0.45);
       h.step++;
-      h.next += HARP_STEP * (i === HARP_PATTERN.length - 1 ? 1.6 : 1);   // breathe at the top of each cycle
+      h.next += HARP_STEP * (i === HARP_PATTERN.length - 1 ? 2.2 : 1) * (0.95 + 0.1 * Math.random());
     }
   };
   schedule();
@@ -815,7 +841,9 @@ function stopVoice(which){
   if (!v) return;
   if (v.harp){
     clearInterval(v.timer);                        // no new plucks; ringing strings fade out
-    v.gain.gain.setTargetAtTime(0, actx.currentTime, 0.9);
+    v.gain.gain.setTargetAtTime(0, actx.currentTime, 1.4);
+    v.padOsc.forEach(o => o.stop(actx.currentTime + 8));
+    v.lfo.stop(actx.currentTime + 8);
     voices[which] = null;
     return;
   }
@@ -830,7 +858,9 @@ function stopVoice(which){
 function retune(){
   if (voices.raw)   voices.raw.osc.frequency.setTargetAtTime(freq, actx.currentTime, 0.02);
   if (voices.lift)  voices.lift.osc.frequency.setTargetAtTime(octaveLift(freq).freq, actx.currentTime, 0.02);
-  // the harp reads the current root on every pluck, so it follows by itself
+  // the harp reads the current root on every pluck; its pad glides after it
+  if (voices.glass) voices.glass.padOsc.forEach(o =>
+    o.frequency.setTargetAtTime(harpRoot() * o.ratio, actx.currentTime, 0.6));
 }
 
 /* ═══════════ Cymatic canvas ═══════════ */

@@ -172,3 +172,16 @@ Verified: pitches correct (fifth/octave/tenth/twelfth of 272 Hz for
 136.1 Hz); offline NumPy render of the same algorithm is click-free.
 (A real-time capture in headless Chromium showed click streaks — those
 were capture underruns, not present in the offline render.)
+
+## 2026-09-24 — Harp tuned "soft, soothing, non-jarring, gentle and dreamy"
+Owner's stated sound goal — use it as the brief for any future audio work.
+- Pluck: excitation low-pass 0.35 → 0.18 (rounder), 12 ms fade-in to
+  remove the snap, ring t60 2.5–6.5 s (buffers 6.5 s).
+- Pattern slowed: [1, 3/2, 2, 5/2, 2, 3/2] (dropped the 3× peak), 0.9 s
+  steps ±5%, 2.2× breath at the top, ±30 ms timing, velocities 0.34–0.5.
+- Warmth lowpass 3.4 → 2.2 kHz; dry 0.7; extra 6 s "halo" convolver
+  (created once) on top of the room reverb; 0.4 s fade-in on start,
+  1.4 s fade on stop.
+- Pad: quiet root + fifth sines (±4 cents) with a ~12 s LFO swell,
+  gliding to follow frequency changes.
+Offline render: peak sample-to-sample jump halved (0.16 → 0.075).
