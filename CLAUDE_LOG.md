@@ -59,3 +59,21 @@ new `app/settings_store.py`) — matches the exact parallel-session
 collision pattern from this repo's history (see git log / prior
 sessions). Did not stage, commit, inspect closely, or otherwise touch
 any of them.
+
+## 2026-09-24 — Resonance Engine handoff checked against the repo
+A Claude.ai-chat handoff note said `resonance-engine.html` (with an audio
+`ReferenceError` fix: undefined `voice` → `which` in `startVoice`/
+`stopVoice`) had been pushed here, that full context lived in
+`claude-log/CLAUDE.md`, and asked whether Render service
+`srv-d96pqgd8nd3s73bd7khg` deploys from this repo. Checked:
+- **Neither file exists on GitHub.** `main` is still at 61c34bd
+  (2026-07-11), the only branch; no file anywhere mentions
+  `startVoice`/`stopVoice`. The push never landed — the file still has
+  to be uploaded from wherever the chat session produced it.
+- **Render does deploy from this repo.** https://cymatic-decoder.onrender.com/
+  serves `app/static/index.html` byte-identical to `main` (modulo CRLF),
+  `/modes?frequency=136` returns 200, origin is uvicorn. The service ID
+  itself wasn't verifiable from here (no Render API access).
+- The handoff's "next up: 3D via Three.js" conflicts with CLAUDE.md's
+  standing instruction that 3D design is the owner's to lead. Not started;
+  needs the owner's explicit go-ahead or their own design.
