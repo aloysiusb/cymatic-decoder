@@ -115,3 +115,13 @@ Added to `app/static/resonance-engine.html` only (no Python change):
   cross-fades into the new one over ~0.9s.
 Pre-existing, not touched: at 390px phone width the header (logo + nav
 + Settings) overflows horizontally by ~85px. Flagged to owner.
+
+## 2026-09-24 — Water view: analogous color weave + accent
+Owner asked to "interweave analogous colors with an accent for depth".
+`tonePalette(freq)` (OKLCH, reuses the page's hexToOklch/oklchToHex):
+the tone's own hue, warm neighbour (−30°), cool neighbour (+30°) and a
+soft complementary accent (+180°, low chroma). In the shader: hue drifts
+warm (centre) → tone → cool (rim); crest / mid / nodal line layers each
+take a different neighbour so they interlace; the caustic fill leans cool
+so it sits back; the accent appears only in the hottest cores and as a
+small spark at the still centre.
