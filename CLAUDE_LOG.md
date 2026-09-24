@@ -95,3 +95,46 @@ mount — no Python change. Changes vs. the handoff prototype:
   switch) that posts an image to the existing `POST /analyze` and loads a
   chosen candidate frequency into the engine. Backend `forward_modes()`
   and engine `cymModes()` share the same formula. Tested locally.
+
+## 2026-09-24 — Water cymatics view on the Resonance Engine
+Owner reopened the visual design: sent CymaScope water-cymatics reference
+photos and chose "water", with color matching each tone's frequency.
+Added to `app/static/resonance-engine.html` only (no Python change):
+- **Water / Sand switch** above the pattern; Water is default, choice is
+  remembered per browser. Sand = the original φ-spiral dots, unchanged.
+  Falls back to Sand automatically if WebGL isn't available.
+- **Water view**: one full-screen WebGL fragment shader, no libraries.
+  Surface height = Bessel-style radial × cos(mθ) modes + m plane waves,
+  driven by the same `cymModes()` folds/rings the engine and `/analyze`
+  use. Light = thin glowing iso-lines around wave crests + a caustic fill,
+  soft tone-map glow, bright rim — to read like light on moving water.
+- **Color** = `colorOctave(freq)` (the tone raised by octaves into visible
+  light), normalized to full strength — so every octave of a note shares
+  a hue, matching the "Color octave" profile card.
+- Animates while a tone plays; on a frequency change the old pattern
+  cross-fades into the new one over ~0.9s.
+Pre-existing, not touched: at 390px phone width the header (logo + nav
++ Settings) overflows horizontally by ~85px. Flagged to owner.
+
+## 2026-09-24 — Water view: analogous color weave + accent
+Owner asked to "interweave analogous colors with an accent for depth".
+`tonePalette(freq)` (OKLCH, reuses the page's hexToOklch/oklchToHex):
+the tone's own hue, warm neighbour (−30°), cool neighbour (+30°) and a
+soft complementary accent (+180°, low chroma). In the shader: hue drifts
+warm (centre) → tone → cool (rim); crest / mid / nodal line layers each
+take a different neighbour so they interlace; the caustic fill leans cool
+so it sits back; the accent appears only in the hottest cores and as a
+small spark at the still centre.
+
+## 2026-09-24 — Water view: motion (idle ripple, speed by frequency, volume energy)
+Owner asked for the water to move like water. Honest framing given to
+her: it's standing-wave math + caustic lighting, not a fluid simulation;
+a real GPU wave-equation sim (ripples propagate, reflect off the rim,
+tap-to-ripple) was offered as a bigger follow-up, not started.
+- `waterTime` now always advances in Water view (rAF), paused via
+  IntersectionObserver when the canvas is scrolled off-screen.
+- `waterRate(freq)`: log-mapped, 8 Hz slow heave → 2 kHz fast shimmer;
+  idle runs at 18% of that rate.
+- `uEnergy` scales wave height (so weak drive naturally shows fewer crest
+  lines) and brightness: idle 0.62, playing 0.8–1.25 by the Volume
+  slider, eased so the surface swells up / settles down.
