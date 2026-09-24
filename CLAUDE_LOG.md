@@ -77,3 +77,21 @@ A Claude.ai-chat handoff note said `resonance-engine.html` (with an audio
 - The handoff's "next up: 3D via Three.js" conflicts with CLAUDE.md's
   standing instruction that 3D design is the owner's to lead. Not started;
   needs the owner's explicit go-ahead or their own design.
+
+## 2026-09-24 — Resonance Engine added (from claude.ai chat)
+The earlier push never landed; owner recovered the file. Added as
+`app/static/resonance-engine.html`, served by the existing `/static`
+mount — no Python change. Changes vs. the handoff prototype:
+- Audio: `voice` → `which` ReferenceError fixed in startVoice/stopVoice.
+- Layout: Voice/Volume/Space controls moved out of `.engine-grid` into
+  `.engine-opts`.
+- Glass harp card always uses the glass timbre, plays the octave-lifted
+  pitch, and its Hz/note readout is now filled in; canvas animates for it.
+- Tuning switched to A432 (`const A4 = 432`); A4 preset 432 Hz, C0 16.05 Hz.
+- iPhone: `navigator.audioSession.type = 'playback'` so the silent switch
+  doesn't mute it; octave-lift floor raised 110 → 220 Hz for phone speakers.
+  Not yet confirmed audible on her phone.
+- New **Decode a pattern** view (header nav, CSS-only `#decode:target`
+  switch) that posts an image to the existing `POST /analyze` and loads a
+  chosen candidate frequency into the engine. Backend `forward_modes()`
+  and engine `cymModes()` share the same formula. Tested locally.

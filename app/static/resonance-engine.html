@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Resonance Engine — Prototype 01</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,900;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --font:      'Montserrat', sans-serif;
+  --black:     #0e0e0e;
+  --white:     #ffffff;
+  --off-white: #f7f6f3;
+  --rule:      rgba(14,14,14,0.09);
+  --muted:     rgba(14,14,14,0.50);
+  --accent:    #b5451b;
+  --accent-soft: rgba(181,69,27,0.10);
+  --pad:       clamp(1.25rem, 4.5vw, 4rem);
+  --max-w:     980px;
+  --phi:       1.618;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--off-white); color: var(--black);
+  font-family: var(--font); -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* ── Header ─────────────────────────────────────────────── */
+header {
+  height: 68px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 var(--pad); border-bottom: 1px solid var(--rule);
+  position: sticky; top: 0; background: var(--off-white); z-index: 40;
+}
+.logo { font-weight: 900; font-size: 1.05rem; letter-spacing: 0.22em; }
+.logo span { color: var(--accent); }
+.header-right { display: flex; align-items: center; gap: 1.25rem; }
+.proto-tag {
+  font-size: 0.62rem; letter-spacing: 0.28em; text-transform: uppercase;
+  color: var(--muted); font-weight: 600;
+}
+#settingsBtn {
+  border: 1px solid var(--rule); background: var(--white);
+  font-family: var(--font); font-weight: 600; font-size: 0.66rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  padding: 0.55rem 1rem; cursor: pointer; transition: all .18s ease;
+}
+#settingsBtn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Layout ─────────────────────────────────────────────── */
+main { max-width: var(--max-w); margin: 0 auto; padding: calc(var(--pad) * 0.9) var(--pad) 6rem; }
+.section-label {
+  font-size: 0.62rem; letter-spacing: 0.3em; text-transform: uppercase;
+  font-weight: 700; color: var(--muted); margin-bottom: 1rem;
+}
+.section-label b { color: var(--accent); font-weight: 700; }
+
+/* ── Hero readout ───────────────────────────────────────── */
+.hero { padding: 2.6rem 0 2rem; border-bottom: 1px solid var(--rule); }
+.freq-display { display: flex; align-items: baseline; gap: 0.8rem; flex-wrap: wrap; }
+#freqBig {
+  font-weight: 900; font-size: clamp(3.4rem, 10vw, 6.2rem);
+  letter-spacing: -0.02em; line-height: 1; font-variant-numeric: tabular-nums;
+}
+.hz-label { font-weight: 300; font-size: clamp(1.4rem, 4vw, 2.2rem); color: var(--muted); }
+#presetName {
+  font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase;
+  font-weight: 600; color: var(--accent); margin-top: 0.9rem; min-height: 1em;
+}
+
+/* ── Controls ───────────────────────────────────────────── */
+.controls { padding: 1.8rem 0; border-bottom: 1px solid var(--rule); }
+.slider-row { display: flex; align-items: center; gap: 1.1rem; margin-bottom: 1.4rem; }
+input[type=range] {
+  flex: 1; -webkit-appearance: none; appearance: none; height: 2px;
+  background: rgba(14,14,14,0.18); outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--accent); cursor: pointer; border: 3px solid var(--off-white);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+input[type=range]::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent); cursor: pointer; border: 3px solid var(--off-white);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+#freqInput {
+  width: 108px; font-family: var(--font); font-weight: 600; font-size: 0.95rem;
+  padding: 0.5rem 0.6rem; border: 1px solid var(--rule); background: var(--white);
+  font-variant-numeric: tabular-nums;
+}
+#freqInput:focus { outline: none; border-color: var(--accent); }
+
+.presets { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.preset {
+  border: 1px solid var(--rule); background: var(--white);
+  font-family: var(--font); font-weight: 600; font-size: 0.63rem;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 0.55rem 0.85rem; cursor: pointer; transition: all .15s ease;
+}
+.preset:hover { border-color: var(--accent); color: var(--accent); }
+.preset.active { background: var(--accent); border-color: var(--accent); color: var(--white); }
+
+/* ── Sound engine ───────────────────────────────────────── */
+.engine { padding: 1.8rem 0; border-bottom: 1px solid var(--rule); }
+.engine-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.4rem; }
+@media (max-width: 860px){ .engine-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 640px){ .engine-grid { grid-template-columns: 1fr; } }
+.engine-card { background: var(--white); border: 1px solid var(--rule); padding: 1.3rem 1.4rem; }
+.engine-card h3 {
+  font-size: 0.62rem; letter-spacing: 0.26em; text-transform: uppercase;
+  font-weight: 700; color: var(--muted); margin-bottom: 0.9rem;
+}
+.tone-freq { font-weight: 900; font-size: 1.7rem; font-variant-numeric: tabular-nums; margin-bottom: 0.25rem; }
+.tone-note { font-size: 0.78rem; color: var(--muted); font-weight: 500; margin-bottom: 1rem; min-height: 1.1em; }
+.play-btn {
+  width: 100%; border: 1px solid var(--black); background: var(--black); color: var(--white);
+  font-family: var(--font); font-weight: 700; font-size: 0.7rem;
+  letter-spacing: 0.24em; text-transform: uppercase;
+  padding: 0.85rem 0; cursor: pointer; transition: all .18s ease;
+}
+.play-btn:hover { background: var(--accent); border-color: var(--accent); }
+.play-btn.playing { background: var(--accent); border-color: var(--accent); }
+.engine-note { font-size: 0.66rem; color: var(--muted); line-height: 1.55; margin-top: 0.85rem; }
+.engine-opts { display: flex; align-items: center; gap: 1rem; margin-top: 1.4rem; flex-wrap: wrap; }
+.opt-group { display: flex; align-items: center; gap: 0.5rem; }
+.opt-group label { font-size: 0.62rem; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600; color: var(--muted); }
+select, .opt-group input[type=range] { font-family: var(--font); font-size: 0.72rem; border: 1px solid var(--rule); background: var(--white); padding: 0.35rem 0.4rem; }
+.opt-group input[type=range] { width: 90px; padding: 0; border: none; }
+
+/* ── Cymatic canvas ─────────────────────────────────────── */
+.cymatic { padding: 1.8rem 0; border-bottom: 1px solid var(--rule); }
+.cym-wrap { background: var(--white); border: 1px solid var(--rule); padding: 1.2rem; display: flex; flex-direction: column; align-items: center; }
+#cymCanvas { width: 100%; max-width: 480px; aspect-ratio: 1; display: block; }
+.cym-caption { font-size: 0.64rem; color: var(--muted); margin-top: 0.9rem; text-align: center; line-height: 1.6; max-width: 480px; }
+
+/* ── Profile cards ──────────────────────────────────────── */
+.profile { padding: 1.8rem 0; }
+.profile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 1rem; }
+.p-card { background: var(--white); border: 1px solid var(--rule); padding: 1.15rem 1.25rem; }
+.p-card h4 {
+  font-size: 0.58rem; letter-spacing: 0.26em; text-transform: uppercase;
+  font-weight: 700; color: var(--muted); margin-bottom: 0.7rem;
+}
+.p-value { font-weight: 900; font-size: 1.35rem; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.p-sub { font-size: 0.66rem; color: var(--muted); margin-top: 0.45rem; line-height: 1.55; }
+.color-chip {
+  width: 100%; height: 44px; border: 1px solid var(--rule); margin-bottom: 0.6rem;
+}
+.band-bar { display: flex; height: 8px; margin-top: 0.7rem; }
+.band-seg { flex: 1; opacity: 0.18; background: var(--black); }
+.band-seg.lit { opacity: 1; background: var(--accent); }
+.band-names { display: flex; margin-top: 0.3rem; }
+.band-names span { flex: 1; font-size: 0.5rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); text-align: center; }
+
+/* ── Settings drawer ────────────────────────────────────── */
+#drawer {
+  position: fixed; top: 0; right: 0; height: 100vh; width: min(360px, 92vw);
+  background: var(--white); border-left: 1px solid var(--rule); z-index: 60;
+  transform: translateX(102%); transition: transform .28s cubic-bezier(.22,.9,.3,1);
+  padding: 1.6rem 1.5rem; overflow-y: auto;
+}
+#drawer.open { transform: translateX(0); }
+.drawer-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.6rem; }
+.drawer-head h2 { font-size: 0.72rem; letter-spacing: 0.3em; text-transform: uppercase; font-weight: 900; }
+#closeDrawer { border: none; background: none; font-size: 1.3rem; cursor: pointer; color: var(--muted); font-family: var(--font); }
+.set-group { margin-bottom: 1.8rem; }
+.set-group h5 { font-size: 0.6rem; letter-spacing: 0.24em; text-transform: uppercase; font-weight: 700; color: var(--muted); margin-bottom: 0.8rem; }
+.picker-row { display: flex; align-items: center; gap: 0.9rem; }
+#accentPicker { width: 54px; height: 54px; border: 1px solid var(--rule); background: none; cursor: pointer; padding: 2px; }
+.oklch-readout { font-size: 0.68rem; font-weight: 600; line-height: 1.7; font-variant-numeric: tabular-nums; }
+.oklch-readout span { color: var(--muted); font-weight: 400; }
+.tonal-strip { display: flex; margin-top: 0.9rem; height: 34px; border: 1px solid var(--rule); }
+.tonal-strip div { flex: 1; position: relative; }
+.tonal-strip div::after {
+  content: attr(data-step); position: absolute; bottom: -1.15rem; left: 50%;
+  transform: translateX(-50%); font-size: 0.48rem; color: var(--muted); letter-spacing: 0.05em;
+}
+.set-actions { display: flex; gap: 0.6rem; margin-top: 2.4rem; }
+.set-actions button {
+  flex: 1; font-family: var(--font); font-weight: 700; font-size: 0.62rem;
+  letter-spacing: 0.2em; text-transform: uppercase; padding: 0.8rem 0;
+  cursor: pointer; transition: all .18s ease;
+}
+#saveSettings { background: var(--black); color: var(--white); border: 1px solid var(--black); }
+#saveSettings:hover { background: var(--accent); border-color: var(--accent); }
+#resetSettings { background: var(--white); color: var(--black); border: 1px solid var(--rule); }
+#resetSettings:hover { border-color: var(--accent); color: var(--accent); }
+
+#toast {
+  position: fixed; bottom: 1.6rem; left: 50%; transform: translate(-50%, 20px);
+  background: var(--black); color: var(--white); font-size: 0.66rem;
+  letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600;
+  padding: 0.75rem 1.4rem; opacity: 0; pointer-events: none; transition: all .3s ease; z-index: 80;
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ── View switch (CSS-only: #decode:target swaps views) ─── */
+.view-nav { display: flex; gap: 0.4rem; }
+.view-nav a {
+  font-family: var(--font); font-weight: 600; font-size: 0.66rem;
+  letter-spacing: 0.2em; text-transform: uppercase; text-decoration: none;
+  color: var(--black); padding: 0.55rem 1rem; border: 1px solid var(--rule);
+  background: var(--white); transition: all .18s ease;
+}
+.view-nav a:hover { border-color: var(--accent); color: var(--accent); }
+.view-nav a.to-engine { background: var(--black); border-color: var(--black); color: var(--white); }
+body:has(#decode:target) .view-nav a.to-engine { background: var(--white); border-color: var(--rule); color: var(--black); }
+body:has(#decode:target) .view-nav a.to-decode { background: var(--black); border-color: var(--black); color: var(--white); }
+#decode { display: none; }
+#decode:target { display: block; }
+body:has(#decode:target) main { display: none; }
+@media (max-width: 640px){ .proto-tag { display: none; } }
+
+/* ── Decode view ────────────────────────────────────────── */
+.decode { max-width: var(--max-w); margin: 0 auto; padding: calc(var(--pad) * 0.9) var(--pad) 6rem; scroll-margin-top: 68px; }
+.decode-intro { font-size: 0.82rem; line-height: 1.7; max-width: 62ch; margin-bottom: 1.6rem; color: var(--muted); }
+.drop {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.6rem;
+  min-height: 220px; padding: 1.4rem; background: var(--white); cursor: pointer;
+  border: 1px dashed rgba(14,14,14,0.28); text-align: center; transition: all .18s ease;
+}
+.drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+.drop strong { font-size: 0.9rem; font-weight: 700; }
+.drop span { font-size: 0.7rem; color: var(--muted); }
+.drop input { display: none; }
+.drop img { max-width: 100%; max-height: 320px; display: block; }
+.drop:has(img[src]) strong, .drop:has(img[src]) span { display: none; }
+.decode-status { font-size: 0.72rem; font-weight: 600; margin: 1rem 0; min-height: 1.2em; }
+.decode-status.err { color: var(--accent); }
+.sym-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.6rem; }
+.cand-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0.6rem; }
+.cand {
+  text-align: left; background: var(--white); border: 1px solid var(--rule); padding: 0.9rem 1rem;
+  font-family: var(--font); cursor: pointer; transition: all .15s ease; color: var(--black);
+}
+.cand:hover { border-color: var(--accent); }
+.cand b { display: block; font-weight: 900; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.cand small { display: block; font-size: 0.62rem; color: var(--muted); margin-top: 0.3rem; line-height: 1.5; }
+.cand small.giza { color: var(--accent); font-weight: 600; }
+.decode-results[hidden] { display: none; }
+
+footer {
+  border-top: 1px solid var(--rule); padding: 1.4rem var(--pad);
+  font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">RESONANCE <span>ENGINE</span></div>
+  <div class="header-right">
+    <div class="proto-tag">Prototype 01 · Sound Core</div>
+    <nav class="view-nav">
+      <a href="#" class="to-engine">Engine</a>
+      <a href="#decode" class="to-decode">Decode a pattern</a>
+    </nav>
+    <button id="settingsBtn">Settings</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- Hero frequency readout -->
+  <section class="hero">
+    <div class="section-label">Source frequency</div>
+    <div class="freq-display">
+      <div id="freqBig">18.98</div>
+      <div class="hz-label">Hz</div>
+    </div>
+    <div id="presetName">Tandy ghost frequency — eyeball resonance</div>
+  </section>
+
+  <!-- Controls -->
+  <section class="controls">
+    <div class="slider-row">
+      <input type="range" id="freqSlider" min="0" max="1000" value="424" step="1"/>
+      <input type="number" id="freqInput" value="18.98" min="0.1" max="20000" step="0.01"/>
+    </div>
+    <div class="presets" id="presets"></div>
+  </section>
+
+  <!-- Sound engine -->
+  <section class="engine">
+    <div class="section-label">Sound engine <b>·</b> dual output</div>
+    <div class="engine-grid">
+      <div class="engine-card">
+        <h3>Raw tone — as measured</h3>
+        <div class="tone-freq" id="rawFreq">18.98 Hz</div>
+        <div class="tone-note" id="rawNote"></div>
+        <button class="play-btn" id="playRaw">Play raw</button>
+        <div class="engine-note" id="rawWarn"></div>
+      </div>
+      <div class="engine-card">
+        <h3>Octave lift — audible</h3>
+        <div class="tone-freq" id="liftFreq"></div>
+        <div class="tone-note" id="liftNote"></div>
+        <button class="play-btn" id="playLift">Play lifted</button>
+        <div class="engine-note">Doubling preserves pitch identity. This is the same tone, raised by whole octaves into the comfortable hearing range.</div>
+      </div>
+      <div class="engine-card">
+        <h3>Glass harp voice</h3>
+        <div class="tone-freq" id="glassFreq"></div>
+        <div class="tone-note" id="glassNote"></div>
+        <button class="play-btn" id="playGlass">Play harp</button>
+        <div class="engine-note">Tuned wineglass choir. Bright, crystalline voice with gradual swell and decay — the classic rubbed-rim resonance.</div>
+      </div>
+    </div>
+    <div class="engine-opts">
+      <div class="opt-group">
+        <label>Voice</label>
+        <select id="waveSel">
+          <option value="organ-flute" selected>Organ — flute pipe</option>
+          <option value="organ-principal">Organ — principal pipe</option>
+          <option value="glass-harp">Glass harp</option>
+          <option value="sine">Pure sine (laboratory)</option>
+          <option value="triangle">Triangle (soft reed)</option>
+        </select>
+      </div>
+      <div class="opt-group">
+        <label>Volume</label>
+        <input type="range" id="volSlider" min="0" max="100" value="35"/>
+      </div>
+      <div class="opt-group">
+        <label>Space</label>
+        <input type="range" id="revSlider" min="0" max="100" value="45"/>
+      </div>
+    </div>
+  </section>
+
+  <!-- Cymatic visualization -->
+  <section class="cymatic">
+    <div class="section-label">Cymatic mode <b>·</b> illustrative</div>
+    <div class="cym-wrap">
+      <canvas id="cymCanvas" width="600" height="600"></canvas>
+      <div class="cym-caption" id="cymCaption"></div>
+    </div>
+  </section>
+
+  <!-- Cross-domain profile -->
+  <section class="profile">
+    <div class="section-label">Cross-domain profile</div>
+    <div class="profile-grid">
+
+      <div class="p-card">
+        <h4>Musical identity</h4>
+        <div class="p-value" id="noteVal">—</div>
+        <div class="p-sub" id="noteSub"></div>
+      </div>
+
+      <div class="p-card">
+        <h4>Brainwave band</h4>
+        <div class="p-value" id="brainVal">—</div>
+        <div class="band-bar" id="bandBar">
+          <div class="band-seg" data-b="delta"></div>
+          <div class="band-seg" data-b="theta"></div>
+          <div class="band-seg" data-b="alpha"></div>
+          <div class="band-seg" data-b="beta"></div>
+          <div class="band-seg" data-b="gamma"></div>
+        </div>
+        <div class="band-names"><span>δ</span><span>θ</span><span>α</span><span>β</span><span>γ</span></div>
+        <div class="p-sub" id="brainSub"></div>
+      </div>
+
+      <div class="p-card">
+        <h4>Schumann proximity</h4>
+        <div class="p-value" id="schuVal">—</div>
+        <div class="p-sub" id="schuSub"></div>
+      </div>
+
+      <div class="p-card">
+        <h4>Color octave</h4>
+        <div class="color-chip" id="colorChip"></div>
+        <div class="p-value" id="colorVal" style="font-size:1.05rem">—</div>
+        <div class="p-sub" id="colorSub"></div>
+      </div>
+
+      <div class="p-card">
+        <h4>Physical scale</h4>
+        <div class="p-value" id="physVal">—</div>
+        <div class="p-sub" id="physSub"></div>
+      </div>
+
+      <div class="p-card">
+        <h4>Body response</h4>
+        <div class="p-value" id="bodyVal" style="font-size:1rem">—</div>
+        <div class="p-sub" id="bodySub"></div>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+
+<!-- Decode view: pattern → frequency -->
+<section id="decode" class="decode">
+  <div class="section-label">Decode a pattern <b>·</b> image → frequency</div>
+  <p class="decode-intro">Upload an image with radial symmetry — a mandala, rose window, temple plan or Chladni photo. The decoder counts its angular folds and radial rings and finds the frequencies that would drive that pattern. Tap a result to load it into the engine.</p>
+
+  <label class="drop" id="dropZone">
+    <input type="file" id="decodeFile" accept="image/*"/>
+    <strong>Choose or drop an image</strong>
+    <span>JPG, PNG or HEIC · works best centered and cropped square</span>
+    <img id="decodePreview" alt=""/>
+  </label>
+
+  <div class="decode-status" id="decodeStatus"></div>
+
+  <div class="decode-results" id="decodeResults" hidden>
+    <div class="sym-row">
+      <div class="p-card">
+        <h4>Angular symmetry</h4>
+        <div class="p-value" id="symFolds">—</div>
+        <div class="p-sub" id="symFoldsConf"></div>
+      </div>
+      <div class="p-card">
+        <h4>Radial rings</h4>
+        <div class="p-value" id="symRings">—</div>
+        <div class="p-sub" id="symRingsConf"></div>
+      </div>
+    </div>
+    <div class="section-label">Candidate frequencies <b>·</b> tap to load</div>
+    <div class="cand-list" id="candList"></div>
+  </div>
+</section>
+
+<!-- Settings drawer -->
+<div id="drawer">
+  <div class="drawer-head">
+    <h2>Settings</h2>
+    <button id="closeDrawer">×</button>
+  </div>
+
+  <div class="set-group">
+    <h5>Accent color</h5>
+    <div class="picker-row">
+      <input type="color" id="accentPicker" value="#b5451b"/>
+      <div class="oklch-readout" id="oklchOut"></div>
+    </div>
+    <div class="tonal-strip" id="tonalStrip"></div>
+  </div>
+
+  <div class="set-actions">
+    <button id="saveSettings">Save &amp; apply</button>
+    <button id="resetSettings">Reset</button>
+  </div>
+</div>
+
+<div id="toast">Settings saved</div>
+
+<footer>
+  <div>Resonance Engine — geometry · frequency · tone</div>
+  <div>φ / OKLCH system</div>
+</footer>
+
+<script>
+(() => {
+'use strict';
+
+/* ═══════════ OKLCH color math (Björn Ottosson) ═══════════ */
+const s2l = c => c <= 0.04045 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4);
+const l2s = c => c <= 0.0031308 ? 12.92*c : 1.055*Math.pow(c, 1/2.4) - 0.055;
+
+function hexToOklch(hex){
+  const r = s2l(parseInt(hex.slice(1,3),16)/255),
+        g = s2l(parseInt(hex.slice(3,5),16)/255),
+        b = s2l(parseInt(hex.slice(5,7),16)/255);
+  const l_ = Math.cbrt(0.4122214708*r + 0.5363325363*g + 0.0514459929*b),
+        m_ = Math.cbrt(0.2119034982*r + 0.6806995451*g + 0.1073969566*b),
+        s_ = Math.cbrt(0.0883024619*r + 0.2817188376*g + 0.6299787005*b);
+  const L = 0.2104542553*l_ + 0.7936177850*m_ - 0.0040720468*s_,
+        a = 1.9779984951*l_ - 2.4285922050*m_ + 0.4505937099*s_,
+        bb= 0.0259040371*l_ + 0.7827717662*m_ - 0.8086757660*s_;
+  const C = Math.hypot(a, bb);
+  let H = Math.atan2(bb, a) * 180/Math.PI;
+  if (H < 0) H += 360;
+  return {L, C, H};
+}
+
+function oklchToHex(L, C, H){
+  const hr = H * Math.PI/180;
+  const a = C * Math.cos(hr), b = C * Math.sin(hr);
+  const l_ = Math.pow(L + 0.3963377774*a + 0.2158037573*b, 3),
+        m_ = Math.pow(L - 0.1055613458*a - 0.0638541728*b, 3),
+        s_ = Math.pow(L - 0.0894841775*a - 1.2914855480*b, 3);
+  let r = l2s( 4.0767416621*l_ - 3.3077115913*m_ + 0.2309699292*s_),
+      g = l2s(-1.2684380046*l_ + 2.6097574011*m_ - 0.3413193965*s_),
+      bl= l2s(-0.0041960863*l_ - 0.7034186147*m_ + 1.7076147010*s_);
+  const cl = v => Math.max(0, Math.min(255, Math.round(v*255)));
+  return '#' + [r,g,bl].map(v => cl(v).toString(16).padStart(2,'0')).join('');
+}
+
+/* Pratt & Lambert tonal strip — 9 steps, chroma peaking at 500 */
+function tonalSteps(baseHex){
+  const {C, H} = hexToOklch(baseHex);
+  const steps = [];
+  for(let i = 0; i < 9; i++){
+    const L = 0.94 - i * (0.66/8);                       // 0.94 → 0.28
+    const cScale = Math.sin((i/8) * Math.PI);            // peaks at step 500
+    steps.push({ step: (i+1)*100, hex: oklchToHex(L, C * (0.35 + 0.65*cScale), H) });
+  }
+  return steps;
+}
+
+/* ═══════════ Frequency math ═══════════ */
+const NOTE_NAMES = ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+const SPEED_SOUND = 343;          // m/s in air
+const SPEED_LIGHT = 299792458;    // m/s
+const A4 = 432;                   // Lemmon Docière tuning reference (Hz)
+
+function nearestNote(f){
+  const midi = 69 + 12 * Math.log2(f/A4);
+  const n = Math.round(midi);
+  const cents = Math.round((midi - n) * 100);
+  const name = NOTE_NAMES[((n % 12) + 12) % 12];
+  const oct = Math.floor(n/12) - 1;
+  return { name, oct, cents };
+}
+
+function octaveLift(f){
+  let k = 0, x = f;
+  while (x < 220) { x *= 2; k++; }   // floor above small-speaker roll-off
+  while (x > 880) { x /= 2; k--; }
+  return { freq: x, octaves: k };
+}
+
+function brainBand(f){
+  if (f < 4)   return { band: 'Delta δ', key: 'delta', desc: 'deep sleep, unconscious repair' };
+  if (f < 8)   return { band: 'Theta θ', key: 'theta', desc: 'meditation, dream states, deep memory' };
+  if (f < 12)  return { band: 'Alpha α', key: 'alpha', desc: 'relaxed awareness, eyes-closed calm' };
+  if (f < 30)  return { band: 'Beta β',  key: 'beta',  desc: 'alert focus, active waking thought' };
+  if (f < 100) return { band: 'Gamma γ', key: 'gamma', desc: 'high-level binding, peak cognition' };
+  return { band: 'Above EEG', key: null, desc: 'outside measured brainwave bands' };
+}
+
+const SCHUMANN = [7.83, 14.3, 20.8, 27.3, 33.8, 39.0, 45.0];
+function schumann(f){
+  let best = SCHUMANN[0], bi = 0;
+  SCHUMANN.forEach((s, i) => { if (Math.abs(f - s) < Math.abs(f - best)) { best = s; bi = i; } });
+  const dev = ((f - best) / best) * 100;
+  return { harmonic: bi + 1, freq: best, dev };
+}
+
+function colorOctave(f){
+  let x = f, k = 0;
+  while (x < 4.0e14) { x *= 2; k++; }
+  // visible band 400–790 THz spans just under one octave; x may land up to <8.0e14
+  const thz = x / 1e12;
+  const nm = (SPEED_LIGHT / x) * 1e9;
+  return { thz, nm, octaves: k, visible: thz <= 790, hex: wavelengthToHex(nm) };
+}
+
+function wavelengthToHex(nm){
+  let r=0, g=0, b=0;
+  if      (nm < 380) { r=0.5; b=1; }
+  else if (nm < 440) { r=-(nm-440)/60; b=1; }
+  else if (nm < 490) { g=(nm-440)/50; b=1; }
+  else if (nm < 510) { g=1; b=-(nm-510)/20; }
+  else if (nm < 580) { r=(nm-510)/70; g=1; }
+  else if (nm < 645) { r=1; g=-(nm-645)/65; }
+  else if (nm <= 780){ r=1; }
+  else               { r=1; }
+  let f = 1;
+  if (nm > 700) f = 0.3 + 0.7*(780-nm)/80;
+  if (nm < 420) f = 0.3 + 0.7*(nm-380)/40;
+  const h = v => Math.round(Math.max(0,Math.min(1,v*f))**0.8 * 255).toString(16).padStart(2,'0');
+  return '#' + h(r) + h(g) + h(b);
+}
+
+function bodyResponse(f){
+  if (f < 0.5)  return { v: 'Below perception', d: 'slower than physiological rhythms' };
+  if (f < 8)    return { v: 'Whole-body / organ range', d: 'chest, abdomen and organs resonate roughly 4–8 Hz; strong infrasound here is felt, not heard' };
+  if (f < 16)   return { v: 'Felt vibration', d: 'below the hearing threshold; perceived as pressure and movement' };
+  if (f < 22)   return { v: 'Eye resonance zone', d: 'the eyeball resonates near 18 Hz — Tandy’s experiments link this range to unease and visual smearing' };
+  if (f < 100)  return { v: 'Deep bass / chest', d: 'audible low end; strong SPL is felt in the chest cavity' };
+  if (f < 4000) return { v: 'Core hearing range', d: 'where human hearing is most sensitive' };
+  return { v: 'Upper hearing', d: 'high-frequency air conduction' };
+}
+
+/* ═══════════ Presets ═══════════ */
+const PRESETS = [
+  { name: 'Schumann fundamental',  f: 7.83,  note: 'Earth–ionosphere cavity resonance' },
+  { name: 'King’s Chamber — low',  f: 16,    note: 'Giza King’s Chamber, low measured resonance (~16 Hz)' },
+  { name: 'Tandy ghost frequency', f: 18.98, note: 'Tandy ghost frequency — eyeball resonance' },
+  { name: 'King’s Chamber — high', f: 30,    note: 'Giza King’s Chamber, upper cited resonance (~30 Hz)' },
+  { name: 'Schumann 3rd harmonic', f: 20.8,  note: 'Third mode of the Earth’s electromagnetic cavity' },
+  { name: 'A4 · 432 tuning',       f: 432,   note: 'A4 in 432 tuning — the engine’s pitch reference' },
+  { name: 'C0 — organ threshold',  f: 16.05, note: 'Lowest C at A432, the edge of pitched hearing' },
+];
+
+/* ═══════════ State ═══════════ */
+let freq = 18.98;
+const LS_KEY = 'resonance_settings';
+
+/* Log-scale slider: 0–1000 maps to 1–2000 Hz */
+const S_MIN = Math.log10(1), S_MAX = Math.log10(2000);
+const sliderToFreq = v => Math.pow(10, S_MIN + (v/1000)*(S_MAX - S_MIN));
+const freqToSlider = f => Math.round(((Math.log10(f) - S_MIN)/(S_MAX - S_MIN)) * 1000);
+
+/* ═══════════ Audio ═══════════ */
+let actx = null;
+const voices = { raw: null, lift: null, glass: null };
+const organWaves = {};
+let dryGain, wetGain, convolver;
+
+/* Organ pipe timbres — additive harmonic recipes.
+   Flute pipe: strong fundamental, whisper of upper partials — round and calm.
+   Principal pipe: the classic full organ chorus — richer harmonic ladder. */
+const TIMBRES = {
+  'organ-flute':     [1, 0.28, 0.06, 0.03, 0.015],
+  'organ-principal': [1, 0.55, 0.38, 0.24, 0.16, 0.10, 0.06, 0.04],
+  'glass-harp':      [1, 0.60, 0.30, 0.20, 0.15],
+};
+
+function makeImpulse(seconds, decay){
+  const rate = actx.sampleRate, len = rate * seconds;
+  const buf = actx.createBuffer(2, len, rate);
+  for (let ch = 0; ch < 2; ch++){
+    const d = buf.getChannelData(ch);
+    for (let i = 0; i < len; i++){
+      // stone-hall style: dense noise tail with exponential decay
+      d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i/len, decay);
+    }
+  }
+  return buf;
+}
+
+function ensureCtx(){
+  // iOS: route Web Audio as media so the ring/silent switch doesn't mute it (Safari 16.4+)
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch(e){}
+  if (actx) { if (actx.state === 'suspended') actx.resume(); return; }
+  actx = new (window.AudioContext || window.webkitAudioContext)();
+  // master routing: voice → [dry] + [convolver → wet] → destination
+  dryGain = actx.createGain();
+  wetGain = actx.createGain();
+  convolver = actx.createConvolver();
+  if (actx.state === 'suspended') actx.resume();
+  convolver.buffer = makeImpulse(3.2, 3.0);      // ~3s stone-nave tail
+  dryGain.connect(actx.destination);
+  convolver.connect(wetGain).connect(actx.destination);
+  // build organ periodic waves
+  for (const name in TIMBRES){
+    const h = TIMBRES[name];
+    const real = new Float32Array(h.length + 1);
+    const imag = new Float32Array(h.length + 1);
+    h.forEach((amp, i) => imag[i + 1] = amp);
+    organWaves[name] = actx.createPeriodicWave(real, imag, { disableNormalization: false });
+  }
+  setSpace(+document.getElementById('revSlider').value);
+}
+
+function setSpace(v){
+  if (!actx) return;
+  const wet = (v / 100) * 0.75;
+  wetGain.gain.setTargetAtTime(wet, actx.currentTime, 0.05);
+  dryGain.gain.setTargetAtTime(1 - wet * 0.45, actx.currentTime, 0.05);
+}
+
+function applyTimbre(osc, name){
+  if (organWaves[name]) osc.setPeriodicWave(organWaves[name]);
+  else osc.type = name;
+}
+
+function startVoice(which, f){
+  ensureCtx();
+  stopVoice(which);
+  const osc = actx.createOscillator();
+  const gain = actx.createGain();
+  // the glass card always speaks as glass; raw + lift follow the Voice menu
+  applyTimbre(osc, which === 'glass' ? 'glass-harp' : document.getElementById('waveSel').value);
+  osc.frequency.value = f;
+  const vol = (document.getElementById('volSlider').value / 100) * 0.5;
+  // speech curve: gentle for organ (pipe swell), quicker for glass (rubbed rim)
+  const attack = which === 'glass' ? 0.12 : 0.22;
+  gain.gain.setValueAtTime(0, actx.currentTime);
+  gain.gain.linearRampToValueAtTime(vol, actx.currentTime + attack);
+  osc.connect(gain);
+  gain.connect(dryGain);
+  gain.connect(convolver);
+  osc.start();
+  voices[which] = { osc, gain };
+}
+
+function stopVoice(which){
+  const v = voices[which];
+  if (!v) return;
+  try {
+    // slow release so reverb carries, longer for glass
+    v.gain.gain.setTargetAtTime(0, actx.currentTime, which === 'glass' ? 0.28 : 0.12);
+    v.osc.stop(actx.currentTime + (which === 'glass' ? 1.8 : 0.8));
+  } catch(e){}
+  voices[which] = null;
+}
+
+function retune(){
+  if (voices.raw)   voices.raw.osc.frequency.setTargetAtTime(freq, actx.currentTime, 0.02);
+  if (voices.lift)  voices.lift.osc.frequency.setTargetAtTime(octaveLift(freq).freq, actx.currentTime, 0.02);
+  // a glass can't sing at infrasound — it plays the octave-lifted pitch
+  if (voices.glass) voices.glass.osc.frequency.setTargetAtTime(octaveLift(freq).freq, actx.currentTime, 0.04);
+}
+
+/* ═══════════ Cymatic canvas ═══════════ */
+const cv = document.getElementById('cymCanvas');
+const cx = cv.getContext('2d');
+let animT = 0;
+
+function cymModes(f){
+  const m = 2 + (Math.round(12 * Math.log2(Math.max(f, 1) / 16)) % 10 + 10) % 10; // angular folds 2–11
+  const r = Math.max(2, Math.min(6, Math.floor(Math.log2(Math.max(f, 2) / 2))));  // radial rings 2–6
+  return { m, r };
+}
+
+function drawCymatic(){
+  const { m, r } = cymModes(freq);
+  const W = cv.width, H = cv.height, R = W * 0.46;
+  cx.clearRect(0, 0, W, H);
+  const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  const playing = voices.raw || voices.lift || voices.glass;
+  const t = playing ? animT : 0;
+
+  const N = 5200;
+  const PHI = (1 + Math.sqrt(5)) / 2;
+  for (let i = 0; i < N; i++){
+    // φ-spiral (sunflower) point distribution
+    const rad = Math.sqrt(i / N);
+    const th  = i * 2 * Math.PI / (PHI * PHI);
+    const val = Math.cos(m * th + t * 0.8) * Math.sin(r * Math.PI * rad);
+    const a   = Math.abs(val);
+    if (a < 0.16){                     // sand collects at nodal lines
+      const x = W/2 + R * rad * Math.cos(th);
+      const y = H/2 + R * rad * Math.sin(th);
+      cx.fillStyle = accent;
+      cx.globalAlpha = 0.85 - a * 3;
+      cx.beginPath();
+      cx.arc(x, y, 2.1, 0, 7);
+      cx.fill();
+    }
+  }
+  cx.globalAlpha = 1;
+  // boundary ring
+  cx.strokeStyle = 'rgba(14,14,14,0.12)';
+  cx.lineWidth = 1;
+  cx.beginPath();
+  cx.arc(W/2, H/2, R, 0, 7);
+  cx.stroke();
+
+  document.getElementById('cymCaption').textContent =
+    `Closest Chladni-style plate mode: ${m}-fold angular symmetry, ${r} radial rings. ` +
+    `Illustrative — real mode shapes depend on the plate’s size, material and boundary. Points seeded on a φ spiral.`;
+}
+
+function loop(){
+  if (voices.raw || voices.lift || voices.glass){
+    animT += 0.03;
+    drawCymatic();
+  }
+  requestAnimationFrame(loop);
+}
+
+/* ═══════════ Render ═══════════ */
+function fmt(f){
+  return f >= 100 ? f.toFixed(1) : f >= 10 ? f.toFixed(2) : f.toFixed(2);
+}
+
+function render(){
+  document.getElementById('freqBig').textContent = fmt(freq);
+  document.getElementById('freqInput').value = fmt(freq);
+  document.getElementById('freqSlider').value = freqToSlider(freq);
+
+  const preset = PRESETS.find(p => Math.abs(p.f - freq) < 0.005);
+  document.getElementById('presetName').textContent = preset ? preset.note : '';
+  document.querySelectorAll('.preset').forEach((b, i) =>
+    b.classList.toggle('active', preset === PRESETS[i]));
+
+  /* engine cards */
+  const note = nearestNote(freq);
+  document.getElementById('rawFreq').textContent = fmt(freq) + ' Hz';
+  document.getElementById('rawNote').textContent =
+    `nearest pitch ${note.name}${note.oct} ${note.cents >= 0 ? '+' : ''}${note.cents}¢`;
+  document.getElementById('rawWarn').textContent =
+    freq < 20 ? 'Infrasound — below the hearing threshold. Most speakers can’t reproduce it; with a subwoofer it’s felt more than heard.' :
+    freq < 40 ? 'Deep bass — needs a real woofer. Laptop speakers will stay silent.' :
+    'Within normal playback range.';
+
+  const lift = octaveLift(freq);
+  document.getElementById('liftFreq').textContent = fmt(lift.freq) + ' Hz';
+  document.getElementById('liftNote').textContent =
+    lift.octaves === 0 ? 'already in the audible band — no shift applied'
+    : `${lift.octaves > 0 ? '+' : ''}${lift.octaves} octave${Math.abs(lift.octaves) !== 1 ? 's' : ''} — same pitch class, hearing range`;
+
+  const gn = nearestNote(lift.freq);
+  document.getElementById('glassFreq').textContent = fmt(lift.freq) + ' Hz';
+  document.getElementById('glassNote').textContent = `${gn.name}${gn.oct} · sung at the audible octave`;
+
+  /* profile */
+  document.getElementById('noteVal').textContent = `${note.name}${note.oct}`;
+  document.getElementById('noteSub').textContent =
+    `${note.cents >= 0 ? '+' : ''}${note.cents} cents from equal temperament (A432) · period ${(1000/freq).toFixed(2)} ms`;
+
+  const bb = brainBand(freq);
+  document.getElementById('brainVal').textContent = bb.band;
+  document.getElementById('brainSub').textContent = bb.desc;
+  document.querySelectorAll('.band-seg').forEach(s =>
+    s.classList.toggle('lit', s.dataset.b === bb.key));
+
+  const sc = schumann(freq);
+  document.getElementById('schuVal').textContent =
+    (sc.dev >= 0 ? '+' : '') + sc.dev.toFixed(1) + '%';
+  document.getElementById('schuSub').textContent =
+    `from Schumann mode ${sc.harmonic} (${sc.freq} Hz) — Earth’s electromagnetic cavity`;
+
+  const co = colorOctave(freq);
+  document.getElementById('colorChip').style.background = co.visible ? co.hex : 'transparent';
+  document.getElementById('colorVal').textContent =
+    co.visible ? `${co.nm.toFixed(0)} nm` : 'near-UV edge';
+  document.getElementById('colorSub').textContent =
+    `+${co.octaves} octaves → ${co.thz.toFixed(0)} THz · the same ratio ladder, ${co.octaves} doublings up, lands in light`;
+
+  const wl = SPEED_SOUND / freq;
+  document.getElementById('physVal').textContent =
+    wl >= 1 ? wl.toFixed(1) + ' m' : (wl*100).toFixed(1) + ' cm';
+  document.getElementById('physSub').textContent =
+    `acoustic wavelength in air · a chamber ~${(wl/2).toFixed(1)} m long resonates here as a half-wave cavity`;
+
+  const br = bodyResponse(freq);
+  document.getElementById('bodyVal').textContent = br.v;
+  document.getElementById('bodySub').textContent = br.d;
+
+  retune();
+  drawCymatic();
+}
+
+/* ═══════════ Settings ═══════════ */
+function applyAccent(hex){
+  document.documentElement.style.setProperty('--accent', hex);
+  const {L, C, H} = hexToOklch(hex);
+  document.getElementById('oklchOut').innerHTML =
+    `<span>L</span> ${(L*100).toFixed(1)}%<br><span>C</span> ${C.toFixed(3)}<br><span>H</span> ${H.toFixed(1)}°`;
+  const strip = document.getElementById('tonalStrip');
+  strip.innerHTML = '';
+  tonalSteps(hex).forEach(s => {
+    const d = document.createElement('div');
+    d.style.background = s.hex;
+    d.dataset.step = s.step;
+    strip.appendChild(d);
+  });
+  drawCymatic();
+}
+
+function loadSettings(){
+  try {
+    const s = JSON.parse(localStorage.getItem(LS_KEY));
+    if (s && s.accent) {
+      document.getElementById('accentPicker').value = s.accent;
+      applyAccent(s.accent);
+      return;
+    }
+  } catch(e){}
+  applyAccent('#b5451b');
+}
+
+/* ═══════════ Events ═══════════ */
+document.getElementById('freqSlider').addEventListener('input', e => {
+  freq = sliderToFreq(+e.target.value); render();
+});
+document.getElementById('freqInput').addEventListener('change', e => {
+  const v = parseFloat(e.target.value);
+  if (v > 0 && v <= 20000) { freq = v; render(); }
+});
+
+const presetWrap = document.getElementById('presets');
+PRESETS.forEach(p => {
+  const b = document.createElement('button');
+  b.className = 'preset';
+  b.textContent = `${p.name} · ${p.f} Hz`;
+  b.addEventListener('click', () => { freq = p.f; render(); });
+  presetWrap.appendChild(b);
+});
+
+document.getElementById('playRaw').addEventListener('click', e => {
+  if (voices.raw) { stopVoice('raw'); e.target.textContent = 'Play raw'; e.target.classList.remove('playing'); }
+  else { startVoice('raw', freq); e.target.textContent = 'Stop'; e.target.classList.add('playing'); }
+});
+document.getElementById('playLift').addEventListener('click', e => {
+  if (voices.lift) { stopVoice('lift'); e.target.textContent = 'Play lifted'; e.target.classList.remove('playing'); }
+  else { startVoice('lift', octaveLift(freq).freq); e.target.textContent = 'Stop'; e.target.classList.add('playing'); }
+});
+document.getElementById('playGlass').addEventListener('click', e => {
+  if (voices.glass) { stopVoice('glass'); e.target.textContent = 'Play harp'; e.target.classList.remove('playing'); }
+  else { startVoice('glass', octaveLift(freq).freq); e.target.textContent = 'Stop'; e.target.classList.add('playing'); }
+});
+document.getElementById('waveSel').addEventListener('change', () => {
+  const t = document.getElementById('waveSel').value;
+  ['raw','lift'].forEach(w => { if (voices[w]) applyTimbre(voices[w].osc, t); });
+});
+document.getElementById('volSlider').addEventListener('input', e => {
+  const vol = (+e.target.value / 100) * 0.5;
+  ['raw','lift','glass'].forEach(w => { if (voices[w]) voices[w].gain.gain.setTargetAtTime(vol, actx.currentTime, 0.03); });
+});
+document.getElementById('revSlider').addEventListener('input', e => setSpace(+e.target.value));
+
+document.getElementById('settingsBtn').addEventListener('click', () =>
+  document.getElementById('drawer').classList.add('open'));
+document.getElementById('closeDrawer').addEventListener('click', () =>
+  document.getElementById('drawer').classList.remove('open'));
+document.getElementById('accentPicker').addEventListener('input', e => applyAccent(e.target.value));
+document.getElementById('saveSettings').addEventListener('click', () => {
+  localStorage.setItem(LS_KEY, JSON.stringify({ accent: document.getElementById('accentPicker').value }));
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+});
+document.getElementById('resetSettings').addEventListener('click', () => {
+  document.getElementById('accentPicker').value = '#b5451b';
+  applyAccent('#b5451b');
+  localStorage.removeItem(LS_KEY);
+});
+
+/* ═══════════ Decode: image → frequency (POST /analyze on the Python app) ═══════════ */
+const dropZone = document.getElementById('dropZone');
+const fileIn   = document.getElementById('decodeFile');
+const statusEl = document.getElementById('decodeStatus');
+
+function setStatus(msg, err){
+  statusEl.textContent = msg;
+  statusEl.classList.toggle('err', !!err);
+}
+
+async function decodeImage(file){
+  if (!file || !file.type.startsWith('image/')) { setStatus('That file isn’t an image.', true); return; }
+  document.getElementById('decodePreview').src = URL.createObjectURL(file);
+  document.getElementById('decodeResults').hidden = true;
+  setStatus('Reading symmetry…');
+  const form = new FormData();
+  form.append('image', file);
+  let res;
+  try {
+    res = await fetch('/analyze', { method: 'POST', body: form });
+  } catch(e){
+    setStatus('Couldn’t reach the decoder. Open this page from cymatic-decoder.onrender.com, not as a local file.', true);
+    return;
+  }
+  if (!res.ok){
+    let detail = 'Decoding failed (' + res.status + ').';
+    try { const j = await res.json(); if (j.detail) detail = j.detail; } catch(e){}
+    setStatus(detail, true);
+    return;
+  }
+  showDecode(await res.json());
+}
+
+function showDecode(data){
+  const s = data.detected_symmetry;
+  document.getElementById('symFolds').textContent = s.angular_folds + '-fold';
+  document.getElementById('symFoldsConf').textContent = 'confidence ' + Math.round(s.angular_confidence * 100) + '%';
+  document.getElementById('symRings').textContent = s.radial_rings + ' rings';
+  document.getElementById('symRingsConf').textContent = 'confidence ' + Math.round(s.radial_confidence * 100) + '%';
+
+  const list = document.getElementById('candList');
+  list.innerHTML = '';
+  data.candidate_frequencies.forEach(c => {
+    const f = c.frequency_hz;
+    const n = nearestNote(f);
+    const g = c.giza_kings_chamber;
+    const b = document.createElement('button');
+    b.className = 'cand';
+    b.innerHTML =
+      `<b>${fmt(f)} Hz</b>` +
+      `<small>${n.name}${n.oct} ${n.cents >= 0 ? '+' : ''}${n.cents}¢ · ${brainBand(f).band}</small>` +
+      (g && g.within_kings_chamber_range ? `<small class="giza">within King’s Chamber range</small>` : '');
+    b.addEventListener('click', () => {
+      freq = f;
+      render();
+      location.hash = '';           // back to the engine view
+      window.scrollTo(0, 0);
+    });
+    list.appendChild(b);
+  });
+  document.getElementById('decodeResults').hidden = false;
+  setStatus(data.candidate_frequencies.length + ' frequencies drive this pattern — one per octave family.');
+}
+
+fileIn.addEventListener('change', e => decodeImage(e.target.files[0]));
+['dragenter','dragover'].forEach(t => dropZone.addEventListener(t, e => { e.preventDefault(); dropZone.classList.add('over'); }));
+['dragleave','drop'].forEach(t => dropZone.addEventListener(t, e => { e.preventDefault(); dropZone.classList.remove('over'); }));
+dropZone.addEventListener('drop', e => decodeImage(e.dataTransfer.files[0]));
+
+/* ═══════════ Boot ═══════════ */
+loadSettings();
+render();
+loop();
+
+})();
+</script>
+</body>
+</html>
