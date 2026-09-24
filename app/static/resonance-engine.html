@@ -47,6 +47,7 @@ header {
   padding: 0.55rem 1rem; cursor: pointer; transition: all .18s ease;
 }
 #settingsBtn:hover { border-color: var(--accent); color: var(--accent); }
+#settingsBtn .gear { display: none; width: 18px; height: 18px; }
 
 /* ── Layout ─────────────────────────────────────────────── */
 main { max-width: var(--max-w); margin: 0 auto; padding: calc(var(--pad) * 0.9) var(--pad) 6rem; }
@@ -226,7 +227,23 @@ body:has(#decode:target) .view-nav a.to-decode { background: var(--black); borde
 #decode { display: none; }
 #decode:target { display: block; }
 body:has(#decode:target) main { display: none; }
-@media (max-width: 640px){ .proto-tag { display: none; } }
+.view-nav a { white-space: nowrap; }
+@media (max-width: 860px){ .proto-tag { display: none; } }
+@media (max-width: 640px){
+  #settingsBtn { padding: 0.45rem; line-height: 0; }
+  #settingsBtn .btn-label { display: none; }
+  #settingsBtn .gear { display: block; }
+  .header-right { gap: 0.5rem; }
+  .logo { font-size: 0.9rem; letter-spacing: 0.16em; }
+  .view-nav a { padding: 0.55rem 0.7rem; letter-spacing: 0.14em; white-space: nowrap; }
+}
+@media (max-width: 460px){
+  .view-nav a .long { display: none; }       /* "Decode a pattern" → "Decode" */
+}
+@media (max-width: 360px){
+  .logo { font-size: 0.78rem; letter-spacing: 0.1em; }
+  .view-nav a { padding: 0.5rem 0.55rem; letter-spacing: 0.1em; }
+}
 
 /* ── Decode view ────────────────────────────────────────── */
 .decode { max-width: var(--max-w); margin: 0 auto; padding: calc(var(--pad) * 0.9) var(--pad) 6rem; scroll-margin-top: 68px; }
@@ -271,9 +288,12 @@ footer {
     <div class="proto-tag">Prototype 01 · Sound Core</div>
     <nav class="view-nav">
       <a href="#" class="to-engine">Engine</a>
-      <a href="#decode" class="to-decode">Decode a pattern</a>
+      <a href="#decode" class="to-decode">Decode<span class="long"> a pattern</span></a>
     </nav>
-    <button id="settingsBtn">Settings</button>
+    <button id="settingsBtn" aria-label="Settings" title="Settings">
+      <svg class="gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+      <span class="btn-label">Settings</span>
+    </button>
   </div>
 </header>
 
@@ -317,11 +337,11 @@ footer {
         <div class="engine-note">Doubling preserves pitch identity. This is the same tone, raised by whole octaves into the comfortable hearing range.</div>
       </div>
       <div class="engine-card">
-        <h3>Glass harp voice</h3>
+        <h3>Harp voice</h3>
         <div class="tone-freq" id="glassFreq"></div>
         <div class="tone-note" id="glassNote"></div>
         <button class="play-btn" id="playGlass">Play harp</button>
-        <div class="engine-note">Tuned wineglass choir. Bright, crystalline voice with gradual swell and decay — the classic rubbed-rim resonance.</div>
+        <div class="engine-note">Soft plucked strings drifting through the tone’s root, fifth and octave over a quiet breathing pad — long ring, dreamy halo.</div>
       </div>
     </div>
     <div class="engine-opts">
@@ -330,7 +350,7 @@ footer {
         <select id="waveSel">
           <option value="organ-flute" selected>Organ — flute pipe</option>
           <option value="organ-principal">Organ — principal pipe</option>
-          <option value="glass-harp">Glass harp</option>
+          <option value="glass-harp">Glass — soft sustained</option>
           <option value="sine">Pure sine (laboratory)</option>
           <option value="triangle">Triangle (soft reed)</option>
         </select>
@@ -632,7 +652,7 @@ let dryGain, wetGain, convolver;
 const TIMBRES = {
   'organ-flute':     [1, 0.28, 0.06, 0.03, 0.015],
   'organ-principal': [1, 0.55, 0.38, 0.24, 0.16, 0.10, 0.06, 0.04],
-  'glass-harp':      [1, 0.60, 0.30, 0.20, 0.15],
+  'glass-harp':      [1, 0.10, 0.035, 0.012],
 };
 
 function makeImpulse(seconds, decay){
@@ -684,17 +704,129 @@ function applyTimbre(osc, name){
   else osc.type = name;
 }
 
+/* ═══════════ Harp: Karplus–Strong plucked strings ═══════════
+   Each note is a real plucked-string simulation rendered once into a buffer:
+   a soft noise burst circulates in a tuned delay line and loses its highs a
+   little each pass, so it rings warm and fades like a gut string. */
+const harpCache = new Map();
+let harpHalo = null;
+
+function harpPluck(f){
+  const key = Math.round(f * 10);
+  if (harpCache.has(key)) return harpCache.get(key);
+  const sr = actx.sampleRate, len = Math.floor(sr * 6.5);
+  const buf = actx.createBuffer(1, len, sr);
+  const y = buf.getChannelData(0);
+  const D = sr / f - 0.5;                       // loop filter adds half a sample
+  const Di = Math.floor(D), fr = D - Di;
+  const t60 = Math.min(6.5, Math.max(2.5, 5.5 * Math.sqrt(220 / f)));  // long, low strings ring longest
+  const g = Math.pow(10, -3 / (t60 * f));       // loss per trip round the string
+  // excitation: noise, heavily low-passed = the soft pad of a finger
+  let a = 0, b = 0;
+  const ex = new Float32Array(Di + 2);
+  for (let i = 0; i < ex.length; i++){
+    a += 0.18 * ((Math.random() * 2 - 1) - a);
+    b += 0.18 * (a - b);
+    ex[i] = b;
+  }
+  const at = n => n < 0 ? 0 : y[n];
+  let peak = 0;
+  for (let n = 0; n < len; n++){
+    const d1 = (1 - fr) * at(n - Di) + fr * at(n - Di - 1);
+    const d2 = (1 - fr) * at(n - Di - 1) + fr * at(n - Di - 2);
+    y[n] = (n < ex.length ? ex[n] : 0) + g * 0.5 * (d1 + d2);
+    const v = Math.abs(y[n]); if (v > peak) peak = v;
+  }
+  const norm = 0.9 / (peak || 1), fadeIn = Math.floor(sr * 0.012), fadeOut = Math.floor(sr * 0.4);
+  for (let n = 0; n < len; n++){
+    let w = norm;
+    if (n < fadeIn) w *= n / fadeIn;
+    if (n > len - fadeOut) w *= (len - n) / fadeOut;
+    y[n] *= w;
+  }
+  harpCache.set(key, buf);
+  return buf;
+}
+
+// a slow, dreamy rise-and-fall through consonant intervals of the root (just ratios)
+const HARP_PATTERN = [1, 1.5, 2, 2.5, 2, 1.5];
+const HARP_STEP = 0.9;                          // seconds between plucks
+
+function harpRoot(){
+  let r = octaveLift(freq).freq;                // 220–880 Hz
+  if (r > 440) r /= 2;                          // keep the roll in the warm middle
+  return r;
+}
+
+function startHarp(){
+  const bus = actx.createGain();
+  const warm = actx.createBiquadFilter();
+  warm.type = 'lowpass'; warm.frequency.value = 2200; warm.Q.value = 0.4;
+  bus.gain.value = 0;
+  bus.gain.setTargetAtTime((document.getElementById('volSlider').value / 100) * 0.5, actx.currentTime, 0.4);
+  bus.connect(warm);
+  const dry = actx.createGain(); dry.gain.value = 0.7;
+  warm.connect(dry).connect(dryGain);
+  warm.connect(convolver);
+  // halo: a long, soft reverb of the harp's own, on top of the room
+  if (!harpHalo){
+    harpHalo = actx.createConvolver();
+    harpHalo.buffer = makeImpulse(6.0, 2.2);
+    const hg = actx.createGain(); hg.gain.value = 0.32;
+    harpHalo.connect(hg).connect(actx.destination);
+  }
+  warm.connect(harpHalo);
+
+  // pad: two quiet, slightly detuned sines (root + fifth) breathing slowly underneath
+  const pad = actx.createGain(); pad.gain.value = 0.05;
+  const lfo = actx.createOscillator(), lfoAmt = actx.createGain();
+  lfo.frequency.value = 0.08; lfoAmt.gain.value = 0.03;       // ~12 s swell
+  lfo.connect(lfoAmt).connect(pad.gain);
+  const padOsc = [[1, -4], [1.5, 4]].map(([ratio, cents]) => {
+    const o = actx.createOscillator();
+    o.type = 'sine'; o.detune.value = cents;
+    o.frequency.value = harpRoot() * ratio; o.ratio = ratio;
+    o.connect(pad); o.start();
+    return o;
+  });
+  pad.connect(bus); lfo.start();
+
+  const h = { harp: true, gain: bus, step: 0, next: actx.currentTime + 0.3, timer: 0, padOsc, lfo };
+  const pluck = (f, t, vel, pan) => {
+    const src = actx.createBufferSource();
+    src.buffer = harpPluck(f);
+    const gn = actx.createGain(); gn.gain.value = vel;
+    const p = actx.createStereoPanner ? actx.createStereoPanner() : null;
+    src.connect(gn);
+    if (p){ p.pan.value = pan; gn.connect(p).connect(bus); } else gn.connect(bus);
+    src.start(t);
+  };
+  const schedule = () => {
+    while (h.next < actx.currentTime + 0.2){
+      const i = h.step % HARP_PATTERN.length, root = harpRoot();
+      const ratio = HARP_PATTERN[i];
+      if (i === 0) pluck(root / 2, h.next, 0.4, 0);             // soft bass under each cycle
+      pluck(root * ratio, h.next + (Math.random() - 0.5) * 0.06,  // unhurried, human timing
+            0.34 + 0.16 * Math.random(), (ratio - 1.75) * 0.45);
+      h.step++;
+      h.next += HARP_STEP * (i === HARP_PATTERN.length - 1 ? 2.2 : 1) * (0.95 + 0.1 * Math.random());
+    }
+  };
+  schedule();
+  h.timer = setInterval(schedule, 50);
+  return h;
+}
+
 function startVoice(which, f){
   ensureCtx();
   stopVoice(which);
+  if (which === 'glass') { voices.glass = startHarp(); return; }
   const osc = actx.createOscillator();
   const gain = actx.createGain();
-  // the glass card always speaks as glass; raw + lift follow the Voice menu
-  applyTimbre(osc, which === 'glass' ? 'glass-harp' : document.getElementById('waveSel').value);
+  applyTimbre(osc, document.getElementById('waveSel').value);
   osc.frequency.value = f;
   const vol = (document.getElementById('volSlider').value / 100) * 0.5;
-  // speech curve: gentle for organ (pipe swell), quicker for glass (rubbed rim)
-  const attack = which === 'glass' ? 0.12 : 0.22;
+  const attack = 0.22;                             // gentle pipe swell
   gain.gain.setValueAtTime(0, actx.currentTime);
   gain.gain.linearRampToValueAtTime(vol, actx.currentTime + attack);
   osc.connect(gain);
@@ -707,10 +839,18 @@ function startVoice(which, f){
 function stopVoice(which){
   const v = voices[which];
   if (!v) return;
+  if (v.harp){
+    clearInterval(v.timer);                        // no new plucks; ringing strings fade out
+    v.gain.gain.setTargetAtTime(0, actx.currentTime, 1.4);
+    v.padOsc.forEach(o => o.stop(actx.currentTime + 8));
+    v.lfo.stop(actx.currentTime + 8);
+    voices[which] = null;
+    return;
+  }
   try {
-    // slow release so reverb carries, longer for glass
-    v.gain.gain.setTargetAtTime(0, actx.currentTime, which === 'glass' ? 0.28 : 0.12);
-    v.osc.stop(actx.currentTime + (which === 'glass' ? 1.8 : 0.8));
+    // slow release so reverb carries
+    v.gain.gain.setTargetAtTime(0, actx.currentTime, 0.12);
+    v.osc.stop(actx.currentTime + 0.8);
   } catch(e){}
   voices[which] = null;
 }
@@ -718,8 +858,9 @@ function stopVoice(which){
 function retune(){
   if (voices.raw)   voices.raw.osc.frequency.setTargetAtTime(freq, actx.currentTime, 0.02);
   if (voices.lift)  voices.lift.osc.frequency.setTargetAtTime(octaveLift(freq).freq, actx.currentTime, 0.02);
-  // a glass can't sing at infrasound — it plays the octave-lifted pitch
-  if (voices.glass) voices.glass.osc.frequency.setTargetAtTime(octaveLift(freq).freq, actx.currentTime, 0.04);
+  // the harp reads the current root on every pluck; its pad glides after it
+  if (voices.glass) voices.glass.padOsc.forEach(o =>
+    o.frequency.setTargetAtTime(harpRoot() * o.ratio, actx.currentTime, 0.6));
 }
 
 /* ═══════════ Cymatic canvas ═══════════ */
@@ -1018,9 +1159,9 @@ function render(){
     lift.octaves === 0 ? 'already in the audible band — no shift applied'
     : `${lift.octaves > 0 ? '+' : ''}${lift.octaves} octave${Math.abs(lift.octaves) !== 1 ? 's' : ''} — same pitch class, hearing range`;
 
-  const gn = nearestNote(lift.freq);
-  document.getElementById('glassFreq').textContent = fmt(lift.freq) + ' Hz';
-  document.getElementById('glassNote').textContent = `${gn.name}${gn.oct} · sung at the audible octave`;
+  const hr = harpRoot(), gn = nearestNote(hr);
+  document.getElementById('glassFreq').textContent = fmt(hr) + ' Hz';
+  document.getElementById('glassNote').textContent = `${gn.name}${gn.oct} · rolled with its fifth and octave`;
 
   /* profile */
   document.getElementById('noteVal').textContent = `${note.name}${note.oct}`;
