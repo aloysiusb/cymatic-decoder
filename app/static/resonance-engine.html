@@ -337,11 +337,11 @@ footer {
         <div class="engine-note">Doubling preserves pitch identity. This is the same tone, raised by whole octaves into the comfortable hearing range.</div>
       </div>
       <div class="engine-card">
-        <h3>Glass harp voice</h3>
+        <h3>Harp voice</h3>
         <div class="tone-freq" id="glassFreq"></div>
         <div class="tone-note" id="glassNote"></div>
         <button class="play-btn" id="playGlass">Play harp</button>
-        <div class="engine-note">Tuned wineglass choir. Bright, crystalline voice with gradual swell and decay — the classic rubbed-rim resonance.</div>
+        <div class="engine-note">Plucked strings rolling slowly through the tone’s root, fifth and octave — soft attack, long ring, stone-hall reverb.</div>
       </div>
     </div>
     <div class="engine-opts">
@@ -350,7 +350,7 @@ footer {
         <select id="waveSel">
           <option value="organ-flute" selected>Organ — flute pipe</option>
           <option value="organ-principal">Organ — principal pipe</option>
-          <option value="glass-harp">Glass harp</option>
+          <option value="glass-harp">Glass — soft sustained</option>
           <option value="sine">Pure sine (laboratory)</option>
           <option value="triangle">Triangle (soft reed)</option>
         </select>
@@ -652,7 +652,7 @@ let dryGain, wetGain, convolver;
 const TIMBRES = {
   'organ-flute':     [1, 0.28, 0.06, 0.03, 0.015],
   'organ-principal': [1, 0.55, 0.38, 0.24, 0.16, 0.10, 0.06, 0.04],
-  'glass-harp':      [1, 0.60, 0.30, 0.20, 0.15],
+  'glass-harp':      [1, 0.10, 0.035, 0.012],
 };
 
 function makeImpulse(seconds, decay){
@@ -704,17 +704,103 @@ function applyTimbre(osc, name){
   else osc.type = name;
 }
 
+/* ═══════════ Harp: Karplus–Strong plucked strings ═══════════
+   Each note is a real plucked-string simulation rendered once into a buffer:
+   a soft noise burst circulates in a tuned delay line and loses its highs a
+   little each pass, so it rings warm and fades like a gut string. */
+const harpCache = new Map();
+
+function harpPluck(f){
+  const key = Math.round(f * 10);
+  if (harpCache.has(key)) return harpCache.get(key);
+  const sr = actx.sampleRate, len = Math.floor(sr * 4.5);
+  const buf = actx.createBuffer(1, len, sr);
+  const y = buf.getChannelData(0);
+  const D = sr / f - 0.5;                       // loop filter adds half a sample
+  const Di = Math.floor(D), fr = D - Di;
+  const t60 = Math.min(5, Math.max(1.8, 4.2 * Math.sqrt(220 / f)));   // low strings ring longer
+  const g = Math.pow(10, -3 / (t60 * f));       // loss per trip round the string
+  // excitation: noise, twice low-passed = a finger, not a pick
+  let a = 0, b = 0;
+  const ex = new Float32Array(Di + 2);
+  for (let i = 0; i < ex.length; i++){
+    a += 0.35 * ((Math.random() * 2 - 1) - a);
+    b += 0.35 * (a - b);
+    ex[i] = b;
+  }
+  const at = n => n < 0 ? 0 : y[n];
+  let peak = 0;
+  for (let n = 0; n < len; n++){
+    const d1 = (1 - fr) * at(n - Di) + fr * at(n - Di - 1);
+    const d2 = (1 - fr) * at(n - Di - 1) + fr * at(n - Di - 2);
+    y[n] = (n < ex.length ? ex[n] : 0) + g * 0.5 * (d1 + d2);
+    const v = Math.abs(y[n]); if (v > peak) peak = v;
+  }
+  const norm = 0.9 / (peak || 1), fadeIn = Math.floor(sr * 0.003), fadeOut = Math.floor(sr * 0.4);
+  for (let n = 0; n < len; n++){
+    let w = norm;
+    if (n < fadeIn) w *= n / fadeIn;
+    if (n > len - fadeOut) w *= (len - n) / fadeOut;
+    y[n] *= w;
+  }
+  harpCache.set(key, buf);
+  return buf;
+}
+
+// a slow rise-and-fall through consonant intervals of the root (just ratios)
+const HARP_PATTERN = [1, 1.5, 2, 2.5, 3, 2.5, 2, 1.5];
+const HARP_STEP = 0.46;                         // seconds between plucks
+
+function harpRoot(){
+  let r = octaveLift(freq).freq;                // 220–880 Hz
+  if (r > 440) r /= 2;                          // keep the roll in the warm middle
+  return r;
+}
+
+function startHarp(){
+  const bus = actx.createGain();
+  const warm = actx.createBiquadFilter();
+  warm.type = 'lowpass'; warm.frequency.value = 3400; warm.Q.value = 0.5;
+  bus.gain.value = (document.getElementById('volSlider').value / 100) * 0.5;
+  bus.connect(warm);
+  warm.connect(dryGain);
+  warm.connect(convolver);
+  const h = { harp: true, gain: bus, step: 0, next: actx.currentTime + 0.05, timer: 0 };
+  const pluck = (f, t, vel, pan) => {
+    const src = actx.createBufferSource();
+    src.buffer = harpPluck(f);
+    const gn = actx.createGain(); gn.gain.value = vel;
+    const p = actx.createStereoPanner ? actx.createStereoPanner() : null;
+    src.connect(gn);
+    if (p){ p.pan.value = pan; gn.connect(p).connect(bus); } else gn.connect(bus);
+    src.start(t);
+  };
+  const schedule = () => {
+    while (h.next < actx.currentTime + 0.2){
+      const i = h.step % HARP_PATTERN.length, root = harpRoot();
+      const ratio = HARP_PATTERN[i];
+      if (i === 0) pluck(root / 2, h.next, 0.55, 0);            // soft bass under each cycle
+      pluck(root * ratio, h.next + (Math.random() - 0.5) * 0.02,  // a touch of human timing
+            0.5 + 0.25 * Math.random(), (ratio - 2) * 0.35);
+      h.step++;
+      h.next += HARP_STEP * (i === HARP_PATTERN.length - 1 ? 1.6 : 1);   // breathe at the top of each cycle
+    }
+  };
+  schedule();
+  h.timer = setInterval(schedule, 50);
+  return h;
+}
+
 function startVoice(which, f){
   ensureCtx();
   stopVoice(which);
+  if (which === 'glass') { voices.glass = startHarp(); return; }
   const osc = actx.createOscillator();
   const gain = actx.createGain();
-  // the glass card always speaks as glass; raw + lift follow the Voice menu
-  applyTimbre(osc, which === 'glass' ? 'glass-harp' : document.getElementById('waveSel').value);
+  applyTimbre(osc, document.getElementById('waveSel').value);
   osc.frequency.value = f;
   const vol = (document.getElementById('volSlider').value / 100) * 0.5;
-  // speech curve: gentle for organ (pipe swell), quicker for glass (rubbed rim)
-  const attack = which === 'glass' ? 0.12 : 0.22;
+  const attack = 0.22;                             // gentle pipe swell
   gain.gain.setValueAtTime(0, actx.currentTime);
   gain.gain.linearRampToValueAtTime(vol, actx.currentTime + attack);
   osc.connect(gain);
@@ -727,10 +813,16 @@ function startVoice(which, f){
 function stopVoice(which){
   const v = voices[which];
   if (!v) return;
+  if (v.harp){
+    clearInterval(v.timer);                        // no new plucks; ringing strings fade out
+    v.gain.gain.setTargetAtTime(0, actx.currentTime, 0.9);
+    voices[which] = null;
+    return;
+  }
   try {
-    // slow release so reverb carries, longer for glass
-    v.gain.gain.setTargetAtTime(0, actx.currentTime, which === 'glass' ? 0.28 : 0.12);
-    v.osc.stop(actx.currentTime + (which === 'glass' ? 1.8 : 0.8));
+    // slow release so reverb carries
+    v.gain.gain.setTargetAtTime(0, actx.currentTime, 0.12);
+    v.osc.stop(actx.currentTime + 0.8);
   } catch(e){}
   voices[which] = null;
 }
@@ -738,8 +830,7 @@ function stopVoice(which){
 function retune(){
   if (voices.raw)   voices.raw.osc.frequency.setTargetAtTime(freq, actx.currentTime, 0.02);
   if (voices.lift)  voices.lift.osc.frequency.setTargetAtTime(octaveLift(freq).freq, actx.currentTime, 0.02);
-  // a glass can't sing at infrasound — it plays the octave-lifted pitch
-  if (voices.glass) voices.glass.osc.frequency.setTargetAtTime(octaveLift(freq).freq, actx.currentTime, 0.04);
+  // the harp reads the current root on every pluck, so it follows by itself
 }
 
 /* ═══════════ Cymatic canvas ═══════════ */
@@ -1038,9 +1129,9 @@ function render(){
     lift.octaves === 0 ? 'already in the audible band — no shift applied'
     : `${lift.octaves > 0 ? '+' : ''}${lift.octaves} octave${Math.abs(lift.octaves) !== 1 ? 's' : ''} — same pitch class, hearing range`;
 
-  const gn = nearestNote(lift.freq);
-  document.getElementById('glassFreq').textContent = fmt(lift.freq) + ' Hz';
-  document.getElementById('glassNote').textContent = `${gn.name}${gn.oct} · sung at the audible octave`;
+  const hr = harpRoot(), gn = nearestNote(hr);
+  document.getElementById('glassFreq').textContent = fmt(hr) + ' Hz';
+  document.getElementById('glassNote').textContent = `${gn.name}${gn.oct} · rolled with its fifth and octave`;
 
   /* profile */
   document.getElementById('noteVal').textContent = `${note.name}${note.oct}`;

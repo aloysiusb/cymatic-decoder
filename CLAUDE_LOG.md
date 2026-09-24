@@ -150,3 +150,25 @@ Owner picked the gear-icon option. CSS + markup only, header of
   640px) so the nav doesn't wrap at tablet widths.
 Verified no horizontal scroll at 320/360/375/390/430/500/641/700/861/1200px;
 Settings drawer and Decode view still open from the header.
+
+## 2026-09-24 — Real plucked harp voice (replaces the humming "glass harp")
+Owner: "the harp does not sound like a harp at all — I want pleasing,
+soothing sound." Cause: the "Glass harp" card was a continuous
+PeriodicWave oscillator with a bright harmonic stack — a buzzy hum, never
+plucked. Changes (`resonance-engine.html` only):
+- Card renamed **Harp voice**; it now runs `startHarp()`: Karplus–Strong
+  plucked strings rendered per pitch into cached AudioBuffers (soft
+  twice-low-passed noise excitation = finger not pick; fractional-delay
+  tuning; decay t60 1.8–5 s, longer for low strings).
+- Plays a slow rolling pattern on just ratios of the root
+  [1, 3/2, 2, 5/2, 3, 5/2, 2, 3/2], 0.46 s apart with a breath at the top,
+  slight timing/velocity humanising, stereo spread, soft bass (root/2)
+  each cycle; through a 3.4 kHz lowpass into the existing reverb.
+  Root = octave-lifted pitch, halved if above 440 Hz to stay warm.
+  Follows frequency changes live; Stop lets strings ring out.
+- Voice-menu "Glass harp" sustained timbre softened to a near-pure rubbed
+  rim [1, .10, .035, .012] and renamed "Glass — soft sustained".
+Verified: pitches correct (fifth/octave/tenth/twelfth of 272 Hz for
+136.1 Hz); offline NumPy render of the same algorithm is click-free.
+(A real-time capture in headless Chromium showed click streaks — those
+were capture underruns, not present in the offline render.)
