@@ -138,3 +138,68 @@ tap-to-ripple) was offered as a bigger follow-up, not started.
 - `uEnergy` scales wave height (so weak drive naturally shows fewer crest
   lines) and brightness: idle 0.62, playing 0.8–1.25 by the Volume
   slider, eased so the surface swells up / settles down.
+
+## 2026-09-24 — Phone header fix (gear icon)
+Owner picked the gear-icon option. CSS + markup only, header of
+`resonance-engine.html`:
+- ≤640px: Settings button shows an inline SVG gear (label hidden, kept as
+  aria-label/title); tighter header gap, logo and nav padding.
+- ≤460px: "Decode a pattern" → "Decode" (" a pattern" in a `.long` span).
+- ≤360px: slightly smaller logo/nav spacing for the smallest phones.
+- Nav links `nowrap`; the "Prototype 01" tag now hides below 860px (was
+  640px) so the nav doesn't wrap at tablet widths.
+Verified no horizontal scroll at 320/360/375/390/430/500/641/700/861/1200px;
+Settings drawer and Decode view still open from the header.
+
+## 2026-09-24 — Real plucked harp voice (replaces the humming "glass harp")
+Owner: "the harp does not sound like a harp at all — I want pleasing,
+soothing sound." Cause: the "Glass harp" card was a continuous
+PeriodicWave oscillator with a bright harmonic stack — a buzzy hum, never
+plucked. Changes (`resonance-engine.html` only):
+- Card renamed **Harp voice**; it now runs `startHarp()`: Karplus–Strong
+  plucked strings rendered per pitch into cached AudioBuffers (soft
+  twice-low-passed noise excitation = finger not pick; fractional-delay
+  tuning; decay t60 1.8–5 s, longer for low strings).
+- Plays a slow rolling pattern on just ratios of the root
+  [1, 3/2, 2, 5/2, 3, 5/2, 2, 3/2], 0.46 s apart with a breath at the top,
+  slight timing/velocity humanising, stereo spread, soft bass (root/2)
+  each cycle; through a 3.4 kHz lowpass into the existing reverb.
+  Root = octave-lifted pitch, halved if above 440 Hz to stay warm.
+  Follows frequency changes live; Stop lets strings ring out.
+- Voice-menu "Glass harp" sustained timbre softened to a near-pure rubbed
+  rim [1, .10, .035, .012] and renamed "Glass — soft sustained".
+Verified: pitches correct (fifth/octave/tenth/twelfth of 272 Hz for
+136.1 Hz); offline NumPy render of the same algorithm is click-free.
+(A real-time capture in headless Chromium showed click streaks — those
+were capture underruns, not present in the offline render.)
+
+## 2026-09-24 — Harp tuned "soft, soothing, non-jarring, gentle and dreamy"
+Owner's stated sound goal — use it as the brief for any future audio work.
+- Pluck: excitation low-pass 0.35 → 0.18 (rounder), 12 ms fade-in to
+  remove the snap, ring t60 2.5–6.5 s (buffers 6.5 s).
+- Pattern slowed: [1, 3/2, 2, 5/2, 2, 3/2] (dropped the 3× peak), 0.9 s
+  steps ±5%, 2.2× breath at the top, ±30 ms timing, velocities 0.34–0.5.
+- Warmth lowpass 3.4 → 2.2 kHz; dry 0.7; extra 6 s "halo" convolver
+  (created once) on top of the room reverb; 0.4 s fade-in on start,
+  1.4 s fade on stop.
+- Pad: quiet root + fifth sines (±4 cents) with a ~12 s LFO swell,
+  gliding to follow frequency changes.
+Offline render: peak sample-to-sample jump halved (0.16 → 0.075).
+
+## 2026-09-30 — Hamburger menu replaces header nav (all widths)
+Owner: "can we just do a cool hamburger menu style? I don't see any sense
+in putting it all up there in the header." Built on top of the still-open
+PR #3 branch (owner believed #3 was merged; it wasn't — still a draft),
+so one merge ships harp + menu. `resonance-engine.html` only:
+- Header is now just logo, "Prototype 01" tag (hidden <860px) and a
+  3-line burger (bottom line shorter; folds into an × — CSS transitions).
+- `<nav id="menu">`: right-side panel (off-white, 380px / 88vw) over a
+  soft blurred scrim; items staggered in: 01 Engine, 02 Decode a pattern,
+  03 Settings (still `#settingsBtn`, now closes menu then opens drawer),
+  footer link "Cymatic Decoder →" to `/` plus the prototype tag. Current
+  view shown in accent via the existing `#decode:target` CSS switch.
+- While open, header floats above the panel (logo fades) so the × stays
+  reachable. Closes on ×, scrim tap, item tap, Escape (Escape also closes
+  the Settings drawer). `inert` when closed; `prefers-reduced-motion`
+  respected. Removed the gear button, `.view-nav` and its phone rules.
+Verified no horizontal scroll 320–1200px; all open/close paths tested.
