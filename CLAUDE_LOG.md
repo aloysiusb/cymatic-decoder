@@ -185,3 +185,21 @@ Owner's stated sound goal — use it as the brief for any future audio work.
 - Pad: quiet root + fifth sines (±4 cents) with a ~12 s LFO swell,
   gliding to follow frequency changes.
 Offline render: peak sample-to-sample jump halved (0.16 → 0.075).
+
+## 2026-09-30 — Hamburger menu replaces header nav (all widths)
+Owner: "can we just do a cool hamburger menu style? I don't see any sense
+in putting it all up there in the header." Built on top of the still-open
+PR #3 branch (owner believed #3 was merged; it wasn't — still a draft),
+so one merge ships harp + menu. `resonance-engine.html` only:
+- Header is now just logo, "Prototype 01" tag (hidden <860px) and a
+  3-line burger (bottom line shorter; folds into an × — CSS transitions).
+- `<nav id="menu">`: right-side panel (off-white, 380px / 88vw) over a
+  soft blurred scrim; items staggered in: 01 Engine, 02 Decode a pattern,
+  03 Settings (still `#settingsBtn`, now closes menu then opens drawer),
+  footer link "Cymatic Decoder →" to `/` plus the prototype tag. Current
+  view shown in accent via the existing `#decode:target` CSS switch.
+- While open, header floats above the panel (logo fades) so the × stays
+  reachable. Closes on ×, scrim tap, item tap, Escape (Escape also closes
+  the Settings drawer). `inert` when closed; `prefers-reduced-motion`
+  respected. Removed the gear button, `.view-nav` and its phone rules.
+Verified no horizontal scroll 320–1200px; all open/close paths tested.
