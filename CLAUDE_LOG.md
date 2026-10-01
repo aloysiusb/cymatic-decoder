@@ -221,3 +221,13 @@ Verified in Chromium with the real woff2 files routed in: the font loads.
 Note: this cloud env's proxy now blocks cymatic-decoder.onrender.com;
 use the Render MCP (`list_deploys`, service srv-d96pqgd8nd3s73bd7khg)
 to confirm deploys instead.
+
+## 2026-10-01 — Cymatic image moved to the top of the Resonance Engine
+PR #4 (Google Sans Flex) merged by the owner; Render deploy
+dep-dav46kl2keus73enbi40 live 11:27 UTC. Then she asked "I would please
+like the image at the top": moved the whole `.cymatic` section (Water/Sand
+switch, canvases, caption) from below the sound engine to the first
+section in `<main>`, ahead of the frequency hero. Markup move only, plus
+`main > .cymatic:first-child { padding-top: 0.6rem }`. No JS change (it
+looks elements up by id). Verified at 390px and 1200px: no horizontal
+scroll, no page errors.
