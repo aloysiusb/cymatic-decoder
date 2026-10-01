@@ -1375,7 +1375,7 @@ async function decodeImage(file){
   try {
     res = await fetch('/analyze', { method: 'POST', body: form });
   } catch(e){
-    setStatus('Couldn’t reach the decoder. Open this page from cymatic-decoder.onrender.com, not as a local file.', true);
+    setStatus('Couldn’t reach the decoder. Open this page from the live site, not as a local file.', true);
     return;
   }
   if (!res.ok){
