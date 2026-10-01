@@ -203,3 +203,21 @@ so one merge ships harp + menu. `resonance-engine.html` only:
   the Settings drawer). `inert` when closed; `prefers-reduced-motion`
   respected. Removed the gear button, `.view-nav` and its phone rules.
 Verified no horizontal scroll 320–1200px; all open/close paths tested.
+
+## 2026-10-01 — Fonts → Google Sans Flex (both pages)
+Owner liked the harp ("sounds pretty good") and asked to change all fonts
+to "the Google flex" — confirmed **Google Sans Flex** (Google Fonts,
+variable: opsz 6–144, wght 100–1000). Also: PR #3 was merged by Claude at
+the owner's explicit request ("yes, merge PR #3") after two of her own
+merge attempts didn't land; Render deploy dep-daup76tg1s2s73cs48k0 went
+live 22:57 UTC 2026-09-30.
+- `resonance-engine.html`: Montserrat link → Google Sans Flex (with
+  preconnects); `--font: 'Google Sans Flex', system-ui, sans-serif`.
+  Every element already used var(--font), so nothing else changed.
+- `index.html` (Cymatic Decoder home): font change only — Flex link
+  after the meta tags, body font-family, and `button, input, select,
+  textarea { font-family: inherit }` so controls match. No other edits.
+Verified in Chromium with the real woff2 files routed in: the font loads.
+Note: this cloud env's proxy now blocks cymatic-decoder.onrender.com;
+use the Render MCP (`list_deploys`, service srv-d96pqgd8nd3s73bd7khg)
+to confirm deploys instead.
