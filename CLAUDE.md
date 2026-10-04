@@ -27,7 +27,10 @@ the working directory.
 - `app/main.py` — FastAPI endpoints: `/analyze` (image upload →
   frequency/mode), `/modes` (reverse frequency → pattern lookup),
   `/audio/*` (WAV synthesis)
-- `app/symmetry.py` — polar-FFT symmetry detection on the uploaded image
+- `app/symmetry.py` — polar-FFT symmetry detection on the uploaded image.
+  Finds the plate's actual centre and corrects for tilt rather than
+  assuming the pattern is centred in frame; `tests/test_symmetry.py`
+  covers it
 - `app/frequency_mapping.py` — Chladni mode ↔ frequency mapping
 - `app/cross_domain.py` — frequency → musical note / brainwave band /
   Schumann resonance / color / physical-scale correspondences
@@ -40,12 +43,18 @@ the working directory.
 `venv/bin/uvicorn app.main:app --reload --port 8420 --app-dir /Users/virginiapayson/Documents/cymatic-decoder`
 
 ## Gotchas
-- No opencv dependency — Python 3.9 on this machine has no prebuilt wheel
-  for it and source-builds forever. Symmetry detection uses NumPy/Pillow
-  polar remap instead. Don't reintroduce opencv without checking this is
-  still true.
-- Python 3.9 here doesn't support `X | None` type-hint syntax — needs
-  `from __future__ import annotations` at the top of any file using it.
+- No opencv dependency. Originally because Python 3.9 here had no prebuilt
+  wheel and source-builds forever. **Reconsidered 2026-10-04 and still
+  rejected** — centre detection and tilt correction, the two things opencv
+  was wanted for, are now done in NumPy (`find_centre`, `find_tilt`), so
+  the dependency would buy a faster `warpPolar` and nothing else. It would
+  also cost: opencv-python needs `libGL` on a headless box, so Render would
+  need `opencv-python-headless`, and the wheel is tens of MB. If you ever
+  do add it, that headless detail is the trap.
+- Python: the owner is upgrading this Mac off 3.9. Until that lands, 3.9
+  can't parse `X | None` type hints, so keep `from __future__ import
+  annotations` at the top of any file using them — it's good practice
+  regardless and costs nothing.
 
 ## Update 2026-09-24 — owner reopened visuals: water cymatics
 Owner shared CymaScope water-cymatics photos (cadboy_hk, magicaqua.de

@@ -231,3 +231,57 @@ section in `<main>`, ahead of the frequency hero. Markup move only, plus
 `main > .cymatic:first-child { padding-top: 0.6rem }`. No JS change (it
 looks elements up by id). Verified at 390px and 1200px: no horizontal
 scroll, no page errors.
+
+## 2026-10-04 — Symmetry detection: find the real centre, correct for tilt
+Owner is upgrading her Mac off Python 3.9, which reopened the question of
+whether `app/symmetry.py` should use opencv. Looked at the code first: the
+polar remap itself was fine, but `cy, cx = h / 2, w / 2` **assumed the
+plate was dead centre in frame**, and nothing corrected for a photo shot
+off-axis. That — not the remap — was the accuracy ceiling.
+
+**Decided against opencv anyway**, having first suggested it. The two wins
+(centre, perspective) don't need it; opencv would have added a tens-of-MB
+wheel, broken her local install until the Python upgrade actually lands,
+and needed `opencv-python-headless` on Render or it fails at import on a
+box with no `libGL`. All of that to replace a polar remap that was already
+correct. Reasoning recorded in CLAUDE.md so it isn't re-litigated.
+
+What changed in `app/symmetry.py` (NumPy/Pillow only, no new dependency):
+- **`find_centre()`** — coarse-to-fine search for the centre that maximises
+  angular symmetry. Every candidate is scored at the same sampling radius
+  so scores stay comparable; a centre has to win on symmetry rather than by
+  sampling a smaller, tamer disc.
+- **`find_tilt()`** — searches a small ellipse (axis ratio + orientation)
+  to undo foreshortening from an off-axis shot. Only accepted if it beats
+  the dead-on reading by 5%, since an ellipse has enough freedom to flatter
+  a circular pattern slightly.
+- **`normalise()`** — percentile contrast stretch, so uneven lighting stops
+  competing with the pattern at low k. Plus a 1px blur against sensor noise.
+- **Downscale cap at 1024px** — a 12MP phone photo now analyses in 0.32s
+  instead of carrying 12M pixels through a remap that samples a few hundred
+  bins a side.
+- **Bug fix:** an unreadable upload raised `UnidentifiedImageError`, which
+  is an `OSError`, but `main.py` only catches `ValueError` — so a junk file
+  came back as a **500 instead of a 400**. `load_grayscale` now converts it.
+- Full radius once centred, rather than the conservative search radius.
+
+Measured against the old code on synthetic patterns of known fold count
+(`tests/test_symmetry.py` renders them, so this is reproducible):
+**old 7/20 correct, new 20/20.** The old code was already wrong at 4%
+off-centre for M=6, and confidence collapsed from ~0.80 centred to ~0.10
+shifted; the new code holds ~0.6–0.8 throughout.
+
+Return dict keeps every key both frontends render (`angular_folds`,
+`angular_confidence`, `radial_rings`, `radial_confidence`) and adds
+`centre_offset_pct` and `tilt_corrected`, which existing callers ignore.
+
+**First tests in this repo** — `tests/test_symmetry.py`, 8 of them, runs
+standalone (`venv/bin/python tests/test_symmetry.py`) or under pytest, so
+it adds no dev dependency.
+
+**Not changed, flagged for the owner:** sand gathers at *nodes*, so plate
+brightness goes as `|cos(mθ)|`, whose angular period is half that of
+`cos(mθ)` — meaning a physically m-fold plate can peak at bin 2m. The app's
+own `forward_modes()` round-trip assumes the current convention, so
+changing it would shift every decoded result. Left alone deliberately;
+it's a definitional call for her, not a bug fix.
