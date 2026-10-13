@@ -37,6 +37,7 @@ the working directory.
 - `app/audio.py` — organ/chorus/classical synthesis, with editable
   brightness/reverb/warmth/tempo
 - `app/music_library.py` — public-domain melody motifs
+- `/resonance` → `app/static/resonance-engine.html` (Resonance Engine page; also at `/static/resonance-engine.html`), linked from the home page
 - `app/static/index.html` — frontend, including a Three.js 3D view
 
 ## Running it

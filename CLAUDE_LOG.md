@@ -313,3 +313,14 @@ brightness goes as `|cos(mθ)|`, whose angular period is half that of
 own `forward_modes()` round-trip assumes the current convention, so
 changing it would shift every decoded result. Left alone deliberately;
 it's a definitional call for her, not a bug fix.
+
+## 2026-10-13 — `/resonance` short link
+Owner thought Render had stopped deploying: the root URL serves the older
+Cymatic Decoder page, and the Resonance Engine (where most recent work
+went) was only reachable at `/static/resonance-engine.html`, with no link
+to it. Render was fine (one service, srv-d96pqgd8nd3s73bd7khg, live on
+d9234a8). Added a `GET /resonance` route in `app/main.py` serving
+`resonance-engine.html`, and an "Open the Resonance Engine →" link under
+the home page's intro. The `/static/...` URL still works. The page only
+uses absolute paths (`/`, `/analyze`), so serving it from `/resonance`
+breaks nothing.

@@ -16,6 +16,11 @@ def index():
     return (STATIC_DIR / "index.html").read_text()
 
 
+@app.get("/resonance", response_class=HTMLResponse)
+def resonance():
+    return (STATIC_DIR / "resonance-engine.html").read_text(encoding="utf-8")
+
+
 def _sound_params(angular_folds: int, radial_rings: int) -> dict:
     # more angular folds + radial rings -> a more intricate mode -> richer harmonic stack
     num_partials = max(1, min(16, angular_folds + radial_rings - 3))
