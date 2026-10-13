@@ -144,6 +144,7 @@ select, .opt-group input[type=range] { font-family: var(--font); font-size: 0.72
 
 /* ── Cymatic canvas ─────────────────────────────────────── */
 .cymatic { padding: 1.8rem 0; border-bottom: 1px solid var(--rule); }
+main > .cymatic:first-child { padding-top: 0.6rem; }
 .cym-wrap { background: var(--white); border: 1px solid var(--rule); padding: 1.2rem; display: flex; flex-direction: column; align-items: center; }
 #cymCanvas { width: 100%; max-width: 480px; aspect-ratio: 1; display: block; }
 .cym-caption { font-size: 0.64rem; color: var(--muted); margin-top: 0.9rem; text-align: center; line-height: 1.6; max-width: 480px; }
@@ -348,6 +349,20 @@ footer {
 
 <main>
 
+  <!-- Cymatic visualization -->
+  <section class="cymatic">
+    <div class="section-label">Cymatic mode <b>·</b> illustrative</div>
+    <div class="cym-wrap" id="cymWrap" data-view="water">
+      <div class="cym-views" id="cymViews">
+        <button data-view="water" class="active">Water</button>
+        <button data-view="sand">Sand</button>
+      </div>
+      <canvas id="waterCanvas" width="720" height="720"></canvas>
+      <canvas id="cymCanvas" width="600" height="600"></canvas>
+      <div class="cym-caption" id="cymCaption"></div>
+    </div>
+  </section>
+
   <!-- Hero frequency readout -->
   <section class="hero">
     <div class="section-label">Source frequency</div>
@@ -412,20 +427,6 @@ footer {
         <label>Space</label>
         <input type="range" id="revSlider" min="0" max="100" value="45"/>
       </div>
-    </div>
-  </section>
-
-  <!-- Cymatic visualization -->
-  <section class="cymatic">
-    <div class="section-label">Cymatic mode <b>·</b> illustrative</div>
-    <div class="cym-wrap" id="cymWrap" data-view="water">
-      <div class="cym-views" id="cymViews">
-        <button data-view="water" class="active">Water</button>
-        <button data-view="sand">Sand</button>
-      </div>
-      <canvas id="waterCanvas" width="720" height="720"></canvas>
-      <canvas id="cymCanvas" width="600" height="600"></canvas>
-      <div class="cym-caption" id="cymCaption"></div>
     </div>
   </section>
 
