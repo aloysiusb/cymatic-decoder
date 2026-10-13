@@ -232,6 +232,34 @@ section in `<main>`, ahead of the frequency hero. Markup move only, plus
 looks elements up by id). Verified at 390px and 1200px: no horizontal
 scroll, no page errors.
 
+## 2026-10-01 — Custom domain groundwork (vpayson.com)
+Owner asked for a vpayson.com link for this app instead of
+https://cymatic-decoder.onrender.com. Findings, so a later session
+doesn't re-derive them:
+- `vpayson.com` and `www.vpayson.com` both resolve to **216.24.57.1**
+  (Render's anycast IP), and the workspace has a separate **static site
+  `vpayson`** (srv-dalgjnajnfac739gkg9g, repo aloysiusb/vpayson) — the
+  apex is her **résumé site** and is not free to take. A Render domain
+  attaches to exactly one service, so the decoder needs a *subdomain*.
+- No Render MCP tool manages custom domains and no RENDER_API_KEY is in
+  the env, so adding the domain is dashboard work for the owner; DNS is
+  at her registrar. Steps were given to her, not executed from here.
+- This cloud env's egress proxy blocks `vpayson.com` as well as
+  `cymatic-decoder.onrender.com` — can't verify either live from a
+  session until those hosts are added to the environment's allowed
+  domains. Use the Render MCP (`list_deploys`/`list_services`) instead.
+- `add_repo` for `aloysiusb/vpayson` and `aloysiusb/CarolynnHeil` was
+  denied by the permission classifier; `color_app` is readable
+  anonymously (it's "Color Theory Wheel" + "Golden Section Palette").
+
+Code change (one line, the only edit this session):
+`resonance-engine.html`'s fetch-failure message named
+`cymatic-decoder.onrender.com` as the host to open the page from — wrong
+under any new domain. Now reads "Open this page from the live site, not
+as a local file." No route or config change; nothing in the app
+hardcodes a hostname otherwise (checked), so a custom domain needs no
+code change at all.
+
 ## 2026-10-04 — Symmetry detection: find the real centre, correct for tilt
 Owner is upgrading her Mac off Python 3.9, which reopened the question of
 whether `app/symmetry.py` should use opencv. Looked at the code first: the
