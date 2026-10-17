@@ -24,7 +24,7 @@ Python 3.9 needs `from __future__ import annotations`) still stand.
 
 ### Session rule — no information may be lost between sessions
 
-**Cross-project, cross-account handoff:** first open the Google Drive folder **CLAUDE HANDOFF** (shared with the work account) — `https://drive.google.com/drive/folders/1xUYY__Q3bh4u1ifyGY8Hftp7b-OVvH3H` — and read its **READ FIRST** doc plus the 3 newest `LOG …` docs. Before your final reply, create a new doc in that folder titled `LOG YYYY-MM-DD — <account> — <topic>` (the Drive connector can create docs but not edit them). No secrets in it. If this session has no Google Drive connector, say so to the owner instead of skipping silently.
+**Cross-session handoff:** first open the Google Drive folder **CLAUDE HANDOFF** (in the owner's Drive) — `https://drive.google.com/drive/folders/1xUYY__Q3bh4u1ifyGY8Hftp7b-OVvH3H` — and read its **READ FIRST** doc plus the 3 newest `LOG …` docs. Before your final reply, create a new doc in that folder titled `LOG YYYY-MM-DD — <app or repo> — <topic>` (the Drive connector can create docs but not edit them). No secrets in it. If this session has no Google Drive connector, say so to the owner instead of skipping silently.
 
 1. Read this block and `CLAUDE_LOG.md` first.
 2. When the owner says something changed outside a session, write it here

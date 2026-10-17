@@ -344,8 +344,14 @@ notes could settle neither.
   returned 200 on 2026-10-11. Nothing in this project was touched or redeployed.
 
 ## 2026-10-17 — Cross-account handoff doc
-- Created the Google Doc "CLAUDE HANDOFF — READ FIRST" (owner's Drive, shared
-  with her work account). It is the one place every session, on either Claude
-  account, reads first and logs to last. The link is in CLAUDE.md's Session rule.
+- Created the Google Drive folder "CLAUDE HANDOFF" (owner's Drive) with a
+  READ FIRST doc. Every session — Claude Code or a regular claude.ai chat —
+  reads it first and, before finishing, adds its own dated `LOG …` doc there
+  (the Drive connector can create docs but not edit them). The link is in
+  CLAUDE.md's Session rule.
+- Owner TOLD: she has ONE Claude account (personal email). The QuickBooks
+  automation was done in a regular claude.ai chat on that account, with
+  QuickBooks signed in as the Evergreen company login — not a second Claude
+  account.
 - Added the same pointer to CLAUDE.md in carolynnheil, town-of-basalt,
   evergreen-driver-app (PR #53) and vpayson (PR #12).
