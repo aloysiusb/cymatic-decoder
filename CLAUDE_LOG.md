@@ -139,6 +139,192 @@ tap-to-ripple) was offered as a bigger follow-up, not started.
   lines) and brightness: idle 0.62, playing 0.8–1.25 by the Volume
   slider, eased so the surface swells up / settles down.
 
+## 2026-09-24 — Phone header fix (gear icon)
+Owner picked the gear-icon option. CSS + markup only, header of
+`resonance-engine.html`:
+- ≤640px: Settings button shows an inline SVG gear (label hidden, kept as
+  aria-label/title); tighter header gap, logo and nav padding.
+- ≤460px: "Decode a pattern" → "Decode" (" a pattern" in a `.long` span).
+- ≤360px: slightly smaller logo/nav spacing for the smallest phones.
+- Nav links `nowrap`; the "Prototype 01" tag now hides below 860px (was
+  640px) so the nav doesn't wrap at tablet widths.
+Verified no horizontal scroll at 320/360/375/390/430/500/641/700/861/1200px;
+Settings drawer and Decode view still open from the header.
+
+## 2026-09-24 — Real plucked harp voice (replaces the humming "glass harp")
+Owner: "the harp does not sound like a harp at all — I want pleasing,
+soothing sound." Cause: the "Glass harp" card was a continuous
+PeriodicWave oscillator with a bright harmonic stack — a buzzy hum, never
+plucked. Changes (`resonance-engine.html` only):
+- Card renamed **Harp voice**; it now runs `startHarp()`: Karplus–Strong
+  plucked strings rendered per pitch into cached AudioBuffers (soft
+  twice-low-passed noise excitation = finger not pick; fractional-delay
+  tuning; decay t60 1.8–5 s, longer for low strings).
+- Plays a slow rolling pattern on just ratios of the root
+  [1, 3/2, 2, 5/2, 3, 5/2, 2, 3/2], 0.46 s apart with a breath at the top,
+  slight timing/velocity humanising, stereo spread, soft bass (root/2)
+  each cycle; through a 3.4 kHz lowpass into the existing reverb.
+  Root = octave-lifted pitch, halved if above 440 Hz to stay warm.
+  Follows frequency changes live; Stop lets strings ring out.
+- Voice-menu "Glass harp" sustained timbre softened to a near-pure rubbed
+  rim [1, .10, .035, .012] and renamed "Glass — soft sustained".
+Verified: pitches correct (fifth/octave/tenth/twelfth of 272 Hz for
+136.1 Hz); offline NumPy render of the same algorithm is click-free.
+(A real-time capture in headless Chromium showed click streaks — those
+were capture underruns, not present in the offline render.)
+
+## 2026-09-24 — Harp tuned "soft, soothing, non-jarring, gentle and dreamy"
+Owner's stated sound goal — use it as the brief for any future audio work.
+- Pluck: excitation low-pass 0.35 → 0.18 (rounder), 12 ms fade-in to
+  remove the snap, ring t60 2.5–6.5 s (buffers 6.5 s).
+- Pattern slowed: [1, 3/2, 2, 5/2, 2, 3/2] (dropped the 3× peak), 0.9 s
+  steps ±5%, 2.2× breath at the top, ±30 ms timing, velocities 0.34–0.5.
+- Warmth lowpass 3.4 → 2.2 kHz; dry 0.7; extra 6 s "halo" convolver
+  (created once) on top of the room reverb; 0.4 s fade-in on start,
+  1.4 s fade on stop.
+- Pad: quiet root + fifth sines (±4 cents) with a ~12 s LFO swell,
+  gliding to follow frequency changes.
+Offline render: peak sample-to-sample jump halved (0.16 → 0.075).
+
+## 2026-09-30 — Hamburger menu replaces header nav (all widths)
+Owner: "can we just do a cool hamburger menu style? I don't see any sense
+in putting it all up there in the header." Built on top of the still-open
+PR #3 branch (owner believed #3 was merged; it wasn't — still a draft),
+so one merge ships harp + menu. `resonance-engine.html` only:
+- Header is now just logo, "Prototype 01" tag (hidden <860px) and a
+  3-line burger (bottom line shorter; folds into an × — CSS transitions).
+- `<nav id="menu">`: right-side panel (off-white, 380px / 88vw) over a
+  soft blurred scrim; items staggered in: 01 Engine, 02 Decode a pattern,
+  03 Settings (still `#settingsBtn`, now closes menu then opens drawer),
+  footer link "Cymatic Decoder →" to `/` plus the prototype tag. Current
+  view shown in accent via the existing `#decode:target` CSS switch.
+- While open, header floats above the panel (logo fades) so the × stays
+  reachable. Closes on ×, scrim tap, item tap, Escape (Escape also closes
+  the Settings drawer). `inert` when closed; `prefers-reduced-motion`
+  respected. Removed the gear button, `.view-nav` and its phone rules.
+Verified no horizontal scroll 320–1200px; all open/close paths tested.
+
+## 2026-10-01 — Fonts → Google Sans Flex (both pages)
+Owner liked the harp ("sounds pretty good") and asked to change all fonts
+to "the Google flex" — confirmed **Google Sans Flex** (Google Fonts,
+variable: opsz 6–144, wght 100–1000). Also: PR #3 was merged by Claude at
+the owner's explicit request ("yes, merge PR #3") after two of her own
+merge attempts didn't land; Render deploy dep-daup76tg1s2s73cs48k0 went
+live 22:57 UTC 2026-09-30.
+- `resonance-engine.html`: Montserrat link → Google Sans Flex (with
+  preconnects); `--font: 'Google Sans Flex', system-ui, sans-serif`.
+  Every element already used var(--font), so nothing else changed.
+- `index.html` (Cymatic Decoder home): font change only — Flex link
+  after the meta tags, body font-family, and `button, input, select,
+  textarea { font-family: inherit }` so controls match. No other edits.
+Verified in Chromium with the real woff2 files routed in: the font loads.
+Note: this cloud env's proxy now blocks cymatic-decoder.onrender.com;
+use the Render MCP (`list_deploys`, service srv-d96pqgd8nd3s73bd7khg)
+to confirm deploys instead.
+
+## 2026-10-01 — Cymatic image moved to the top of the Resonance Engine
+PR #4 (Google Sans Flex) merged by the owner; Render deploy
+dep-dav46kl2keus73enbi40 live 11:27 UTC. Then she asked "I would please
+like the image at the top": moved the whole `.cymatic` section (Water/Sand
+switch, canvases, caption) from below the sound engine to the first
+section in `<main>`, ahead of the frequency hero. Markup move only, plus
+`main > .cymatic:first-child { padding-top: 0.6rem }`. No JS change (it
+looks elements up by id). Verified at 390px and 1200px: no horizontal
+scroll, no page errors.
+
+## 2026-10-01 — Custom domain groundwork (vpayson.com)
+Owner asked for a vpayson.com link for this app instead of
+https://cymatic-decoder.onrender.com. Findings, so a later session
+doesn't re-derive them:
+- `vpayson.com` and `www.vpayson.com` both resolve to **216.24.57.1**
+  (Render's anycast IP), and the workspace has a separate **static site
+  `vpayson`** (srv-dalgjnajnfac739gkg9g, repo aloysiusb/vpayson) — the
+  apex is her **résumé site** and is not free to take. A Render domain
+  attaches to exactly one service, so the decoder needs a *subdomain*.
+- No Render MCP tool manages custom domains and no RENDER_API_KEY is in
+  the env, so adding the domain is dashboard work for the owner; DNS is
+  at her registrar. Steps were given to her, not executed from here.
+- This cloud env's egress proxy blocks `vpayson.com` as well as
+  `cymatic-decoder.onrender.com` — can't verify either live from a
+  session until those hosts are added to the environment's allowed
+  domains. Use the Render MCP (`list_deploys`/`list_services`) instead.
+- `add_repo` for `aloysiusb/vpayson` and `aloysiusb/CarolynnHeil` was
+  denied by the permission classifier; `color_app` is readable
+  anonymously (it's "Color Theory Wheel" + "Golden Section Palette").
+
+Code change (one line, the only edit this session):
+`resonance-engine.html`'s fetch-failure message named
+`cymatic-decoder.onrender.com` as the host to open the page from — wrong
+under any new domain. Now reads "Open this page from the live site, not
+as a local file." No route or config change; nothing in the app
+hardcodes a hostname otherwise (checked), so a custom domain needs no
+code change at all.
+
+## 2026-10-04 — Symmetry detection: find the real centre, correct for tilt
+Owner is upgrading her Mac off Python 3.9, which reopened the question of
+whether `app/symmetry.py` should use opencv. Looked at the code first: the
+polar remap itself was fine, but `cy, cx = h / 2, w / 2` **assumed the
+plate was dead centre in frame**, and nothing corrected for a photo shot
+off-axis. That — not the remap — was the accuracy ceiling.
+
+**Decided against opencv anyway**, having first suggested it. The two wins
+(centre, perspective) don't need it; opencv would have added a tens-of-MB
+wheel, broken her local install until the Python upgrade actually lands,
+and needed `opencv-python-headless` on Render or it fails at import on a
+box with no `libGL`. All of that to replace a polar remap that was already
+correct. Reasoning recorded in CLAUDE.md so it isn't re-litigated.
+
+What changed in `app/symmetry.py` (NumPy/Pillow only, no new dependency):
+- **`find_centre()`** — coarse-to-fine search for the centre that maximises
+  angular symmetry. Every candidate is scored at the same sampling radius
+  so scores stay comparable; a centre has to win on symmetry rather than by
+  sampling a smaller, tamer disc.
+- **`find_tilt()`** — searches a small ellipse (axis ratio + orientation)
+  to undo foreshortening from an off-axis shot. Only accepted if it beats
+  the dead-on reading by 5%, since an ellipse has enough freedom to flatter
+  a circular pattern slightly.
+- **`normalise()`** — percentile contrast stretch, so uneven lighting stops
+  competing with the pattern at low k. Plus a 1px blur against sensor noise.
+- **Downscale cap at 1024px** — a 12MP phone photo now analyses in 0.32s
+  instead of carrying 12M pixels through a remap that samples a few hundred
+  bins a side.
+- **Bug fix:** an unreadable upload raised `UnidentifiedImageError`, which
+  is an `OSError`, but `main.py` only catches `ValueError` — so a junk file
+  came back as a **500 instead of a 400**. `load_grayscale` now converts it.
+- Full radius once centred, rather than the conservative search radius.
+
+Measured against the old code on synthetic patterns of known fold count
+(`tests/test_symmetry.py` renders them, so this is reproducible):
+**old 7/20 correct, new 20/20.** The old code was already wrong at 4%
+off-centre for M=6, and confidence collapsed from ~0.80 centred to ~0.10
+shifted; the new code holds ~0.6–0.8 throughout.
+
+Return dict keeps every key both frontends render (`angular_folds`,
+`angular_confidence`, `radial_rings`, `radial_confidence`) and adds
+`centre_offset_pct` and `tilt_corrected`, which existing callers ignore.
+
+**First tests in this repo** — `tests/test_symmetry.py`, 8 of them, runs
+standalone (`venv/bin/python tests/test_symmetry.py`) or under pytest, so
+it adds no dev dependency.
+
+**Not changed, flagged for the owner:** sand gathers at *nodes*, so plate
+brightness goes as `|cos(mθ)|`, whose angular period is half that of
+`cos(mθ)` — meaning a physically m-fold plate can peak at bin 2m. The app's
+own `forward_modes()` round-trip assumes the current convention, so
+changing it would shift every decoded result. Left alone deliberately;
+it's a definitional call for her, not a bug fix.
+
+## 2026-10-13 — `/resonance` short link
+Owner thought Render had stopped deploying: the root URL serves the older
+Cymatic Decoder page, and the Resonance Engine (where most recent work
+went) was only reachable at `/static/resonance-engine.html`, with no link
+to it. Render was fine (one service, srv-d96pqgd8nd3s73bd7khg, live on
+d9234a8). Added a `GET /resonance` route in `app/main.py` serving
+`resonance-engine.html`, and an "Open the Resonance Engine →" link under
+the home page's intro. The `/static/...` URL still works. The page only
+uses absolute paths (`/`, `/analyze`), so serving it from `/resonance`
+breaks nothing.
+
 ## 2026-10-17 — Current state block added; stale "not a git repo" note removed
 
 No code changed. The owner asked that no information be lost between Claude
@@ -156,3 +342,10 @@ notes could settle neither.
   what a check could not have shown.
 - Verified in passing: `vpayson.com` links to this app's water view and that URL
   returned 200 on 2026-10-11. Nothing in this project was touched or redeployed.
+
+## 2026-10-17 — Cross-account handoff doc
+- Created the Google Doc "CLAUDE HANDOFF — READ FIRST" (owner's Drive, shared
+  with her work account). It is the one place every session, on either Claude
+  account, reads first and logs to last. The link is in CLAUDE.md's Session rule.
+- Added the same pointer to CLAUDE.md in carolynnheil, town-of-basalt,
+  evergreen-driver-app (PR #53) and vpayson (PR #12).
