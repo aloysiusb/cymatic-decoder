@@ -6,12 +6,35 @@ for prior context, and add a new dated entry after making changes. Don't
 rely on conversation memory alone; it doesn't carry across sessions or
 models, but this file does.
 
-Note: this project is **not currently a git repo** (no `.git`, no
-remote), so there's no `origin/main` to diff against and no way for two
-sessions to diverge on GitHub the way it happened on a sibling project —
-but the same risk exists locally if this is ever worked from two machines
-or two parallel sessions. If you initialize git here, keep this file's
-instruction intact.
+## Current state — READ THIS, then update it before you end the session
+
+*Last updated 2026-10-17. VERIFIED means a session checked it; Owner TOLD means
+she said so. UNVERIFIED is a claim, not a fact.*
+
+| Area | State | Basis |
+|---|---|---|
+| Git | **This is a git repo.** Remote `github.com/aloysiusb/cymatic-decoder` (public). An earlier version of this file said it was not a git repo; that was true once and has been wrong for a while | VERIFIED |
+| Hosting | Render web service `cymatic-decoder`, Python, auto-deploys from `main`. Service record last updated 2026-10-13. Not suspended | VERIFIED 2026-10-17 |
+| Live links | `vpayson.com` no longer links here. Since 2026-10-13 it serves its own static, server-free copy at `vpayson.com/resonance/` (vpayson PR #10). This app still runs and returned 200 on 2026-10-17. It still does two things the static copy cannot: the decoder page and the WAV audio. **Stopping this Render service is the owner's call, and would lose both** | VERIFIED 2026-10-17 |
+| Water view | Built and merged (PR #2). Owner's direction, not ours: iterate on it from her feedback only | VERIFIED |
+| 3D view | Still hers to design. Do not start 3D visual work unless she asks again | Owner TOLD |
+
+The rest of this file's rules (the audio is solid; do not reintroduce opencv;
+Python 3.9 needs `from __future__ import annotations`) still stand.
+
+### Session rule — no information may be lost between sessions
+
+**Cross-session handoff:** first open the Google Drive folder **CLAUDE HANDOFF** (in the owner's Drive) — `https://drive.google.com/drive/folders/1xUYY__Q3bh4u1ifyGY8Hftp7b-OVvH3H` — and read its **READ FIRST** doc plus the 3 newest `LOG …` docs. Before your final reply, create a new doc in that folder titled `LOG YYYY-MM-DD — <app or repo> — <topic>` (the Drive connector can create docs but not edit them). No secrets in it. If this session has no Google Drive connector, say so to the owner instead of skipping silently.
+
+1. Read this block and `CLAUDE_LOG.md` first.
+2. When the owner says something changed outside a session, write it here
+   **immediately**, marked "Owner TOLD".
+3. Before ending, update the date and every line you touched, and say how you
+   know it. Never call something fine because one check passed without saying
+   what that check could not have shown.
+4. Sessions here are told to work on a `claude/<task>` branch and open a draft
+   PR. The owner works from an iPad and dictation mangles technical words, so
+   give one step at a time and keep answers short.
 
 ## What this is
 Cymatic Decoder — a Python/FastAPI tool for reverse-engineering cymatic

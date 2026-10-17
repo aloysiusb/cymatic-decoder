@@ -324,3 +324,34 @@ d9234a8). Added a `GET /resonance` route in `app/main.py` serving
 the home page's intro. The `/static/...` URL still works. The page only
 uses absolute paths (`/`, `/analyze`), so serving it from `/resonance`
 breaks nothing.
+
+## 2026-10-17 — Current state block added; stale "not a git repo" note removed
+
+No code changed. The owner asked that no information be lost between Claude
+sessions across all of her projects, after a QuickBooks integration was
+described as "connected" in one session and "never run" in another, and the
+notes could settle neither.
+
+- Replaced the paragraph saying this is not a git repo. It is one, with the
+  remote `aloysiusb/cymatic-decoder`, deployed on Render and auto-deploying
+  from `main`. A session reading the old note would have gone looking for the
+  wrong things.
+- Added a **Current state** table to CLAUDE.md, each line marked VERIFIED,
+  owner TOLD or UNVERIFIED, and a short session rule: write down anything the
+  owner says changed outside a session at once, update before ending, and say
+  what a check could not have shown.
+- Verified in passing: `vpayson.com` links to this app's water view and that URL
+  returned 200 on 2026-10-11. Nothing in this project was touched or redeployed.
+
+## 2026-10-17 — Cross-account handoff doc
+- Created the Google Drive folder "CLAUDE HANDOFF" (owner's Drive) with a
+  READ FIRST doc. Every session — Claude Code or a regular claude.ai chat —
+  reads it first and, before finishing, adds its own dated `LOG …` doc there
+  (the Drive connector can create docs but not edit them). The link is in
+  CLAUDE.md's Session rule.
+- Owner TOLD: she has ONE Claude account (personal email). The QuickBooks
+  automation was done in a regular claude.ai chat on that account, with
+  QuickBooks signed in as the Evergreen company login — not a second Claude
+  account.
+- Added the same pointer to CLAUDE.md in carolynnheil, town-of-basalt,
+  evergreen-driver-app (PR #53) and vpayson (PR #12).
