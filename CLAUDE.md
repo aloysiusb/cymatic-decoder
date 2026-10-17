@@ -14,8 +14,8 @@ she said so. UNVERIFIED is a claim, not a fact.*
 | Area | State | Basis |
 |---|---|---|
 | Git | **This is a git repo.** Remote `github.com/aloysiusb/cymatic-decoder` (public). An earlier version of this file said it was not a git repo; that was true once and has been wrong for a while | VERIFIED |
-| Hosting | Render web service `cymatic-decoder`, Python, auto-deploys from `main`. Last deploy 2026-10-08 | VERIFIED |
-| Live link | `vpayson.com` links to `cymatic-decoder.onrender.com/static/resonance-engine.html`, which returned 200 on 2026-10-11 | VERIFIED 2026-10-11 |
+| Hosting | Render web service `cymatic-decoder`, Python, auto-deploys from `main`. Service record last updated 2026-10-13. Not suspended | VERIFIED 2026-10-17 |
+| Live links | `vpayson.com` no longer links here. Since 2026-10-13 it serves its own static, server-free copy at `vpayson.com/resonance/` (vpayson PR #10). This app still runs and returned 200 on 2026-10-17. It still does two things the static copy cannot: the decoder page and the WAV audio. **Stopping this Render service is the owner's call, and would lose both** | VERIFIED 2026-10-17 |
 | Water view | Built and merged (PR #2). Owner's direction, not ours: iterate on it from her feedback only | VERIFIED |
 | 3D view | Still hers to design. Do not start 3D visual work unless she asks again | Owner TOLD |
 
