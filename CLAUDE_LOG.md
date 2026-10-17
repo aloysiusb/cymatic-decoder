@@ -138,3 +138,21 @@ tap-to-ripple) was offered as a bigger follow-up, not started.
 - `uEnergy` scales wave height (so weak drive naturally shows fewer crest
   lines) and brightness: idle 0.62, playing 0.8–1.25 by the Volume
   slider, eased so the surface swells up / settles down.
+
+## 2026-10-17 — Current state block added; stale "not a git repo" note removed
+
+No code changed. The owner asked that no information be lost between Claude
+sessions across all of her projects, after a QuickBooks integration was
+described as "connected" in one session and "never run" in another, and the
+notes could settle neither.
+
+- Replaced the paragraph saying this is not a git repo. It is one, with the
+  remote `aloysiusb/cymatic-decoder`, deployed on Render and auto-deploying
+  from `main`. A session reading the old note would have gone looking for the
+  wrong things.
+- Added a **Current state** table to CLAUDE.md, each line marked VERIFIED,
+  owner TOLD or UNVERIFIED, and a short session rule: write down anything the
+  owner says changed outside a session at once, update before ending, and say
+  what a check could not have shown.
+- Verified in passing: `vpayson.com` links to this app's water view and that URL
+  returned 200 on 2026-10-11. Nothing in this project was touched or redeployed.
